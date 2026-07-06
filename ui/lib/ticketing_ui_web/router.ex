@@ -40,6 +40,12 @@ defmodule TicketingUiWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     get "/", PageController, :home
+
+    live_session :authenticated,
+      on_mount: [{TicketingUiWeb.Auth, :ensure_authenticated}] do
+      live "/teams", TeamLive.Index, :index
+      live "/epics", EpicLive.Index, :index
+    end
   end
 
   # Public liveness/readiness endpoint.

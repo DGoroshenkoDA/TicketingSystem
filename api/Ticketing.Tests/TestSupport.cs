@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Ticketing.Data;
+using Ticketing.Data.Entities;
 using Ticketing.Services.Auth;
+using Ticketing.Services.Epics;
+using Ticketing.Services.Teams;
 
 namespace Ticketing.Tests;
 
@@ -30,4 +33,30 @@ internal static class TestSupport
 
     public static AuthService NewAuthService(TicketingDbContext db)
         => new(db, NewHasher(), NewTokenService());
+
+    public static TeamService NewTeamService(TicketingDbContext db) => new(db);
+
+    public static EpicService NewEpicService(TicketingDbContext db) => new(db);
+
+    // Adds a ticket directly (no TicketService yet) for integrity-rule tests.
+    public static Ticket AddTicket(TicketingDbContext db, Guid teamId, Guid? epicId = null)
+    {
+        var now = DateTime.UtcNow;
+        var ticket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            TeamId = teamId,
+            Type = "bug",
+            State = "new",
+            EpicId = epicId,
+            Title = "Sample",
+            Body = "Body",
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = now,
+            ModifiedAt = now
+        };
+        db.Tickets.Add(ticket);
+        db.SaveChanges();
+        return ticket;
+    }
 }

@@ -46,7 +46,8 @@ defmodule TicketingUi.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end
 

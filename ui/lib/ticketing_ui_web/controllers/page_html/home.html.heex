@@ -3,6 +3,15 @@
     Welcome, {@current_user.name || @current_user.email}
   </h1>
   <p class="mt-3 text-gray-600">
-    You are signed in. The Kanban board, teams, epics, and tickets are added in the next phases.
+    You are signed in. Manage your work below. The Kanban board and tickets are added in the next phases.
   </p>
+
+  <div class="mt-6 flex gap-3">
+    <a href="/teams" class="rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover">
+      Teams
+    </a>
+    <a href="/epics" class="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50">
+      Epics
+    </a>
+  </div>
 </div>

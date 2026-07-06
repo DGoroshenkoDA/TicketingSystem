@@ -136,4 +136,36 @@ defmodule TicketingUiWeb.BoardLiveTest do
 
     assert html =~ "Move failed."
   end
+
+  defp comment(body \\ "Existing comment") do
+    %{id: "c-1", ticketId: "tk-1", authorId: "u-1", authorName: "Alice", body: body, createdAt: "2026-01-01T00:00:00Z"}
+  end
+
+  test "opening a ticket shows comments and adding one posts", %{conn: conn, bypass: bypass} do
+    stub_common(bypass)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets", fn c ->
+      json(c, 200, %{success: true, data: [ticket()]})
+    end)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1", fn c ->
+      json(c, 200, %{success: true, data: ticket()})
+    end)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1/comments", fn c ->
+      json(c, 200, %{success: true, data: [comment()]})
+    end)
+
+    Bypass.expect_once(bypass, "POST", "/api/v1/tickets/tk-1/comments", fn c ->
+      json(c, 201, %{success: true, data: comment("New")})
+    end)
+
+    {:ok, view, _html} = live(authed(conn), "/board")
+
+    html = view |> element("button[data-ticket-id='tk-1']") |> render_click()
+    assert html =~ "Existing comment"
+
+    html2 = view |> form("#comment-form", %{body: "New"}) |> render_submit()
+    assert html2 =~ "Existing comment"
+  end
 end

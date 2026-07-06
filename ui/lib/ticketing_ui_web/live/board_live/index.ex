@@ -1,7 +1,7 @@
 defmodule TicketingUiWeb.BoardLive.Index do
   use TicketingUiWeb, :live_view
 
-  alias TicketingUi.Api.{EpicsApi, TeamsApi, TicketsApi}
+  alias TicketingUi.Api.{CommentsApi, EpicsApi, TeamsApi, TicketsApi}
 
   @states [
     {"new", "New"},
@@ -31,7 +31,8 @@ defmodule TicketingUiWeb.BoardLive.Index do
         modal: nil,
         modal_form: %{},
         modal_epics: [],
-        modal_error: nil
+        modal_error: nil,
+        comments: []
       )
       |> load_board()
 
@@ -74,7 +75,8 @@ defmodule TicketingUiWeb.BoardLive.Index do
        modal: %{mode: :new, id: nil, meta: nil},
        modal_form: form,
        modal_epics: epics_for(socket, team_id),
-       modal_error: nil
+       modal_error: nil,
+       comments: []
      )}
   end
 
@@ -101,7 +103,8 @@ defmodule TicketingUiWeb.BoardLive.Index do
            modal: %{mode: :edit, id: t["id"], meta: meta},
            modal_form: form,
            modal_epics: epics_for(socket, t["teamId"]),
-           modal_error: nil
+           modal_error: nil,
+           comments: load_comment_list(socket, t["id"])
          )}
 
       {:error, err} ->
@@ -171,6 +174,22 @@ defmodule TicketingUiWeb.BoardLive.Index do
     end
   end
 
+  def handle_event("add_comment", %{"body" => body}, socket) do
+    case socket.assigns.modal do
+      %{mode: :edit, id: id} ->
+        case CommentsApi.create(token(socket), id, body) do
+          {:ok, _} ->
+            {:noreply, assign(socket, comments: load_comment_list(socket, id))}
+
+          {:error, err} ->
+            {:noreply, assign(socket, modal_error: err[:detail] || "Could not add comment.")}
+        end
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("delete_ticket", %{"id" => id}, socket) do
     case TicketsApi.delete(token(socket), id) do
       {:ok, _} ->
@@ -188,6 +207,13 @@ defmodule TicketingUiWeb.BoardLive.Index do
   defp list_teams(socket) do
     case TeamsApi.list(token(socket)) do
       {:ok, teams} when is_list(teams) -> teams
+      _ -> []
+    end
+  end
+
+  defp load_comment_list(socket, ticket_id) do
+    case CommentsApi.list(token(socket), ticket_id) do
+      {:ok, list} when is_list(list) -> list
       _ -> []
     end
   end
@@ -327,7 +353,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
         </div>
       </div>
 
-      <.ticket_modal :if={@modal} modal={@modal} form={@modal_form} epics={@modal_epics} teams={@teams} states={@states} types={@types} error={@modal_error} />
+      <.ticket_modal :if={@modal} modal={@modal} form={@modal_form} epics={@modal_epics} teams={@teams} states={@states} types={@types} error={@modal_error} comments={@comments} />
     </div>
     """
   end
@@ -429,6 +455,29 @@ defmodule TicketingUiWeb.BoardLive.Index do
             </div>
           </div>
         </form>
+
+        <div :if={@modal.mode == :edit} class="mt-6 border-t border-gray-100 pt-4">
+          <h3 class="text-sm font-semibold text-gray-700">Comments</h3>
+          <p :if={@comments == []} class="mt-2 text-sm text-gray-400">No comments yet.</p>
+          <ul class="mt-2 space-y-2">
+            <li :for={c <- @comments} class="rounded-lg bg-gray-50 p-2">
+              <div class="text-xs text-gray-400">{c["authorName"] || "—"} · {c["createdAt"]}</div>
+              <p class="text-sm text-gray-800">{c["body"]}</p>
+            </li>
+          </ul>
+          <form id="comment-form" phx-submit="add_comment" class="mt-3 flex gap-2">
+            <input
+              type="text"
+              name="body"
+              placeholder="Add a comment"
+              required
+              class="flex-1 rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
+            />
+            <button type="submit" class="rounded-lg bg-brand px-3 py-2 text-sm text-white hover:bg-brand-hover">
+              Send
+            </button>
+          </form>
+        </div>
       </div>
     </div>
     """

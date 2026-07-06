@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Ticketing.Data;
 using Ticketing.Data.Entities;
 using Ticketing.Services.Auth;
+using Ticketing.Services.Comments;
 using Ticketing.Services.Epics;
 using Ticketing.Services.Teams;
 using Ticketing.Services.Tickets;
@@ -40,6 +41,8 @@ internal static class TestSupport
     public static EpicService NewEpicService(TicketingDbContext db) => new(db);
 
     public static TicketService NewTicketService(TicketingDbContext db) => new(db);
+
+    public static CommentService NewCommentService(TicketingDbContext db) => new(db);
 
     public static Guid AddUser(TicketingDbContext db, string email = "user@example.com")
     {

@@ -1,26 +1,89 @@
+using System.Text;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Ticketing.Api.Validators;
 using Ticketing.Data;
+using Ticketing.Services;
+using Ticketing.Services.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// EF Core / PostgreSQL. snake_case mapping matches the migration DDL.
+// --- EF Core / PostgreSQL (snake_case matches the migration DDL) ---
 var connectionString = builder.Configuration.GetConnectionString("Default");
 builder.Services.AddDbContext<TicketingDbContext>(options =>
     options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
-// Phase 0/1 skeleton. Auth, controllers, validation are wired up in later phases.
+// --- Options + services ---
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.AddTicketingServices();
+builder.Services.AddValidatorsFromAssemblyContaining<SignupRequestValidator>();
+
+// --- Authentication (JWT bearer) ---
+// Bearer options are configured from JwtOptions resolved via DI (lazily, at first
+// request) so configuration added late (e.g. in tests) is picked up correctly.
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+
+builder.Services
+    .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((bearer, jwtAccessor) =>
+    {
+        var jwt = jwtAccessor.Value;
+        bearer.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwt.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+// Everything requires authentication unless explicitly [AllowAnonymous].
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+// Use FluentValidation only; suppress the default automatic model-state 400.
+builder.Services.Configure<ApiBehaviorOptions>(o => o.SuppressModelStateInvalidFilter = true);
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Apply migrations on startup (with a short retry in case the DB is still coming up).
-// Skipped under the "Testing" environment, where there is no database.
+// Apply migrations on startup (skipped under the "Testing" environment).
 if (!app.Environment.IsEnvironment("Testing"))
 {
     await ApplyMigrationsAsync(app);
 }
 
-// Public readiness/liveness endpoint (allowed to be public per requirements).
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+// Public readiness/liveness endpoint.
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 
 app.Run();
 
@@ -46,7 +109,6 @@ static async Task ApplyMigrationsAsync(WebApplication app)
         }
     }
 
-    // Final attempt: let it throw so the container fails loudly.
     await db.Database.MigrateAsync();
 }
 

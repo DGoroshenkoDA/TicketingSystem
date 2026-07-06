@@ -27,14 +27,14 @@ public class TicketingDbContext : DbContext
         modelBuilder.Entity<User>(e =>
         {
             e.HasKey(u => u.Id);
-            e.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(u => u.Id).ValueGeneratedNever();
             e.HasIndex(u => u.EmailNormalized).IsUnique();
         });
 
         modelBuilder.Entity<RefreshToken>(e =>
         {
             e.HasKey(r => r.Id);
-            e.Property(r => r.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(r => r.Id).ValueGeneratedNever();
             e.HasIndex(r => r.UserId);
             e.HasOne(r => r.User)
                 .WithMany(u => u.RefreshTokens)
@@ -45,14 +45,14 @@ public class TicketingDbContext : DbContext
         modelBuilder.Entity<Team>(e =>
         {
             e.HasKey(t => t.Id);
-            e.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(t => t.Id).ValueGeneratedNever();
             e.HasIndex(t => t.NameNormalized).IsUnique();
         });
 
         modelBuilder.Entity<Epic>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(x => x.Id).ValueGeneratedNever();
             // Alternate key required as the target of the composite FK from tickets.
             e.HasAlternateKey(x => new { x.Id, x.TeamId });
             e.HasIndex(x => x.TeamId);
@@ -65,7 +65,7 @@ public class TicketingDbContext : DbContext
         modelBuilder.Entity<Ticket>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(x => x.Id).ValueGeneratedNever();
 
             e.ToTable(t =>
             {
@@ -101,7 +101,7 @@ public class TicketingDbContext : DbContext
         modelBuilder.Entity<Comment>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(x => x.Id).ValueGeneratedNever();
             e.HasIndex(x => new { x.TicketId, x.CreatedAt });
 
             e.HasOne(x => x.Ticket)

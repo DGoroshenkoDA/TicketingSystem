@@ -105,7 +105,13 @@ Response format — envelope `{ "success": true, "data": … }`; errors — `{ "
 
 ## Tests
 
-At least one backend business flow, e.g.: create team → create epic → create ticket → `PATCH state` → verify persisted; and a negative case: `DELETE` a non-empty team → 409. For a new service — unit tests; for a new controller — scenario tests.
+Testing is a first-class requirement, not a single smoke test.
+
+- **Unit tests cover all code.** Every service, helper, validator, and non-trivial branch has unit tests. New code is not considered done until it is covered.
+- **Scenario tests** exercise end-to-end business flows through the service/API layer, with **both positive and negative cases**. Examples:
+  - Auth: sign up a user, then log in successfully (positive); log in with a wrong password → unauthorized; sign up with a duplicate email → conflict; refresh with an invalid/expired token → unauthorized.
+  - Tickets: create team → create epic → create ticket → `PATCH state` → verify persisted (positive); `DELETE` a non-empty team → 409, reference an epic from another team → rejected (negative).
+- Tests run without external infrastructure where possible (EF Core InMemory for service/scenario tests); tests must pass in CI and locally.
 
 ## Migrations
 

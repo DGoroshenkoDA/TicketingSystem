@@ -84,4 +84,4 @@ TicketingSystem/
 - **Usability:** loading / empty / success / error states where applicable.
 - **Compatibility:** current desktop Chrome, Edge, Firefox.
 - **Maintainability:** README with prerequisites, config, startup commands.
-- **Testing:** at least one backend business flow and at least one UI/API flow.
+- **Testing:** all code is covered by unit tests; scenario tests exercise end-to-end business flows with both positive and negative cases (e.g. sign up then log in; login with wrong password; duplicate email). At least one UI/API flow is covered on the frontend side.

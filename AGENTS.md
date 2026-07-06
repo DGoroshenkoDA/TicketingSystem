@@ -31,7 +31,7 @@ Rules:
 - **Do not invent endpoints** — check the controllers and `docs/02_backend.md`.
 - **Server-side validation is mandatory:** all enums and references are checked on the backend; client-side validation is not enough.
 - **Migrations:** do not edit an already-applied migration — create a new one. Schema only through EF Core migrations, no raw SQL bypassing migrations.
-- **Tests are mandatory:** for a new service — unit tests; for a new controller — a scenario test.
+- **Tests are mandatory:** all code must be covered by unit tests. In addition, write scenario tests for business flows with both positive and negative cases (e.g. sign up a user then log in; login with a wrong password; duplicate email → conflict). Code is not done until it is tested.
 - C# code style: `Nullable` and `ImplicitUsings` enabled; async/await for I/O; meaningful names.
 
 ## Frontend (Phoenix/LiveView)

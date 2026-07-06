@@ -39,7 +39,11 @@ public class HealthEndpointTests : IClassFixture<HealthEndpointTests.TestAppFact
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     // A syntactically valid connection string; never actually connected to.
-                    ["ConnectionStrings:Default"] = "Host=localhost;Database=test;Username=test;Password=test"
+                    ["ConnectionStrings:Default"] = "Host=localhost;Database=test;Username=test;Password=test",
+                    // JWT config so the auth setup can build a signing key at startup.
+                    ["Jwt:Secret"] = "test_secret_key_that_is_long_enough_1234567890",
+                    ["Jwt:Issuer"] = "ticketing-api",
+                    ["Jwt:Audience"] = "ticketing-ui"
                 });
             });
         }

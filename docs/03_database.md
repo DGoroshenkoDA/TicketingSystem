@@ -84,4 +84,10 @@ Additional constraint: `UNIQUE (id, team_id)` — required for the composite FK 
 ## Indexes
 
 - UNIQUE on `users.email_normalized`, `teams.name_normalized`.
-- Indexes for board quer
+- Indexes for board queries: `tickets (team_id, state, modified_at DESC)`, `tickets (team_id, epic_id)`, `tickets (team_id, type)`.
+- Index for title search (case-insensitive substring) — e.g., on `lower(title)`.
+- `comments (ticket_id, created_at)` for chronological display.
+
+## Initial state
+
+After migrations are applied, a fresh database contains only the schema and migration metadata. No users, teams, epics, tickets, or comments are created by default — QA creates test data through the UI/API.

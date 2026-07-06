@@ -62,4 +62,9 @@ The whole stack comes up from the repository root with a single `docker compose 
 
 ## Deviation from the original hackathon spec
 
-The original requirements (`requirements/…docx`, sections 3 and 10) mandate email verification: a v
+The original requirements (`requirements/…docx`, sections 3 and 10) mandate email verification: a verification email sent via SMTP (`relay1.dataart.com`), single-use tokens expiring in 24h, an unverified account being blocked from the app, a verification-result screen, and a resend action. By deliberate decision this is **out of scope** here — authentication is simplified to profile creation + login only. Passwords are still hashed (Argon2id) and never stored in plaintext. If this project is judged against the original spec, the missing email-verification flow is the one known gap.
+
+## Resolved decisions
+
+1. Ticket create/edit/details is a **modal over the board**, not a separate page.
+2. Authentication uses **access + refresh** JWTs: a short-lived access token plus a longer-lived refresh token used to obtain a new access token.

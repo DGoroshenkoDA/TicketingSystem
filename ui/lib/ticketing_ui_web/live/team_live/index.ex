@@ -27,7 +27,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
     {:noreply, assign(socket, editing_id: nil)}
   end
 
-  def handle_event("save_edit", %{"id" => id, "name" => name}, socket) do
+  def handle_event("save_edit", %{"team_id" => id, "name" => name}, socket) do
     case TeamsApi.update(token(socket), id, name) do
       {:ok, _team} ->
         {:noreply, socket |> assign(editing_id: nil) |> put_flash(:info, "Team renamed.") |> load_teams()}
@@ -91,8 +91,8 @@ defmodule TicketingUiWeb.TeamLive.Index do
             </span>
           </div>
 
-          <form :if={@editing_id == team["id"]} phx-submit="save_edit" class="flex items-center gap-2">
-            <input type="hidden" name="id" value={team["id"]} />
+          <form :if={@editing_id == team["id"]} id={"team-edit-#{team["id"]}"} phx-submit="save_edit" class="flex items-center gap-2">
+            <input type="hidden" name="team_id" value={team["id"]} />
             <input
               type="text"
               name="name"

@@ -43,6 +43,7 @@ defmodule TicketingUiWeb.Router do
 
     live_session :authenticated,
       on_mount: [{TicketingUiWeb.Auth, :ensure_authenticated}] do
+      live "/board", BoardLive.Index, :index
       live "/teams", TeamLive.Index, :index
       live "/epics", EpicLive.Index, :index
     end

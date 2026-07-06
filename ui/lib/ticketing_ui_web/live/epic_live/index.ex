@@ -35,7 +35,7 @@ defmodule TicketingUiWeb.EpicLive.Index do
   def handle_event("start_edit", %{"id" => id}, socket), do: {:noreply, assign(socket, editing_id: id)}
   def handle_event("cancel_edit", _params, socket), do: {:noreply, assign(socket, editing_id: nil)}
 
-  def handle_event("save_edit", %{"id" => id, "title" => title} = params, socket) do
+  def handle_event("save_edit", %{"epic_id" => id, "title" => title} = params, socket) do
     attrs = %{title: title, description: params["description"] || ""}
 
     case EpicsApi.update(token(socket), id, attrs) do
@@ -152,8 +152,8 @@ defmodule TicketingUiWeb.EpicLive.Index do
               </div>
             </div>
 
-            <form :if={@editing_id == epic["id"]} phx-submit="save_edit" class="space-y-2">
-              <input type="hidden" name="id" value={epic["id"]} />
+            <form :if={@editing_id == epic["id"]} id={"epic-edit-#{epic["id"]}"} phx-submit="save_edit" class="space-y-2">
+              <input type="hidden" name="epic_id" value={epic["id"]} />
               <input
                 type="text"
                 name="title"

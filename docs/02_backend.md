@@ -94,21 +94,4 @@ Response format — envelope `{ "success": true, "data": … }`; errors — `{ "
 
 ## HTTP codes
 
-| Situation | Code |
-|-----------|------|
-| Success | 200 / 201 |
-| Validation error | 400 |
-| Not authenticated | 401 |
-| Forbidden / profile not ready | 403 |
-| Record not found | 404 |
-| Integrity conflict (deleting a non-empty team / referenced epic) | 409 |
-
-## Tests
-
-At least one backend business flow, e.g.: create team → create epic → create ticket → `PATCH state` → verify persisted; and a negative case: `DELETE` a non-empty team → 409. For a new service — unit tests; for a new controller — scenario tests.
-
-## Migrations
-
-- The schema is created exclusively through EF Core migrations, auto-applied on API startup.
-- An already-applied migration is not edited — create a new one.
-- A fresh database contains only the schema and migration metadata; no seed data is loaded by default.
+| Situation 

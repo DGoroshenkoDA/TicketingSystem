@@ -1,26 +1,23 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Ticketing.Tests;
 
-// Phase 0 smoke test: the API boots and /health responds 200.
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+// Phase 0/1 smoke test: the API boots and /health responds 200.
+// Runs in the "Testing" environment so startup migrations are skipped
+// (no database is required for this test).
+public class HealthEndpointTests : IClassFixture<HealthEndpointTests.TestAppFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestAppFactory _factory;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointTests(TestAppFactory factory)
     {
         _factory = factory;
     }
 
     [Fact]
-    public async Task Health_Returns_Ok()
-    {
-        var client = _factory.CreateClient();
-
-        var response = await client.GetAsync("/health");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-}
+    public async Tas

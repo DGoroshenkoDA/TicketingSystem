@@ -1,14 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using Ticketing.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Phase 0: minimal skeleton. DI, EF Core, JWT, controllers, and validation
-// are wired up in later phases.
+// EF Core / PostgreSQL. snake_case mapping matches the migration DDL.
+var connectionString = builder.Configuration.GetConnectionString("Default");
+builder.Services.AddDbContext<TicketingDbContext>(options =>
+    options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
-var app = builder.Build();
-
-// Public readiness/liveness endpoint (allowed to be public per requirements).
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-
-app.Run();
-
-// Exposed so the WebApplicationFactory-based tests can reference the entry point.
-public partial class Program { }
+// Phase 0/1 skeleton. Auth, controllers, validation are wired up in lat

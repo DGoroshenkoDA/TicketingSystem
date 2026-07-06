@@ -15,6 +15,18 @@ Identifiers are `uuid` (`gen_random_uuid()`). Timestamps are `timestamptz`, valu
 | created_at | timestamptz | |
 | modified_at | timestamptz | |
 
+### refresh_tokens
+| Column | Type | Rules |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid FK → users | ON DELETE CASCADE |
+| token_hash | text | hash of the refresh token; raw value never stored |
+| expires_at | timestamptz | longer-lived than the access token |
+| revoked_at | timestamptz NULL | set on logout or rotation |
+| created_at | timestamptz | |
+
+Index on `user_id`. A refresh token is valid only if it exists, is not expired, and `revoked_at` is null.
+
 ### teams
 | Column | Type | Rules |
 |--------|------|-------|
@@ -72,10 +84,4 @@ Additional constraint: `UNIQUE (id, team_id)` — required for the composite FK 
 ## Indexes
 
 - UNIQUE on `users.email_normalized`, `teams.name_normalized`.
-- Indexes for board queries: `tickets (team_id, state, modified_at DESC)`, `tickets (team_id, epic_id)`, `tickets (team_id, type)`.
-- Index for title search (case-insensitive substring) — e.g., on `lower(title)`.
-- `comments (ticket_id, created_at)` for chronological display.
-
-## Initial state
-
-After migrations are applied, a fresh database contains only the schema and migration metadata. No users, teams, epics, tickets, or comments are created by default — QA creates test data through the UI/API.
+- Indexes for board quer

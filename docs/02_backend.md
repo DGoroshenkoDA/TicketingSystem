@@ -35,11 +35,14 @@ Rules:
 - `displayName` — non-empty after trimming.
 
 **Login** — `POST /api/v1/auth/login` **[public]**
-Fields: `email`, `password`. On success returns a JWT (+ profile data).
+Fields: `email`, `password`. On success returns an **access token** (short-lived JWT) and a **refresh token** (longer-lived), plus profile data.
 
-**Logout** — `POST /api/v1/auth/logout`.
+**Refresh** — `POST /api/v1/auth/refresh` **[public]**
+Exchanges a valid refresh token for a new access token (and, optionally, a rotated refresh token). Invalid/expired refresh tokens return 401.
 
-All other business endpoints require a valid JWT. The token is sent in the `Authorization: Bearer …` header, never in the URL.
+**Logout** — `POST /api/v1/auth/logout` — invalidates the current refresh token.
+
+All other business endpoints require a valid access token. The token is sent in the `Authorization: Bearer …` header, never in the URL. The UI stores tokens in its server-side session cookie and refreshes transparently.
 
 ## REST API
 
@@ -48,6 +51,7 @@ Response format — envelope `{ "success": true, "data": … }`; errors — `{ "
 **Auth**
 - `POST /api/v1/auth/signup` **[public]**
 - `POST /api/v1/auth/login` **[public]**
+- `POST /api/v1/auth/refresh` **[public]**
 - `POST /api/v1/auth/logout`
 
 **Teams**
@@ -90,15 +94,4 @@ Response format — envelope `{ "success": true, "data": … }`; errors — `{ "
 
 ## HTTP codes
 
-| Situation | Code |
-|-----------|------|
-| Success | 200 / 201 |
-| Validation error | 400 |
-| Not authenticated | 401 |
-| Forbidden / profile not ready | 403 |
-| Record not found | 404 |
-| Integrity conflict (deleting a non-empty team / referenced epic) | 409 |
-
-## Tests
-
-At least one backend business flow, e.g.: create team → create epic → create ticket → `PATCH state` → verify persisted; and a negative case: `DELETE` a non-empty team → 409. For a
+| Situation 

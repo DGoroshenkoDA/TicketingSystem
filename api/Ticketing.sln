@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ticketing.Api", "Ticketing.Api\Ticketing.Api.csproj", "{5526C66C-52A6-4949-9195-43EF6192A1DF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ticketing.Services", "Ticketing.Services\Ticketing.Services.csproj", "{D7D08B88-3901-4BEF-B7C2-91346FD3857F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ticketing.Data", "Ticketing.Data\Ticketing.Data.csproj", "{2B254F76-4CDC-47D2-84AD-46B999E33C70}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ticketing.Common", "Ticketing.Common\Ticketing.Common.csproj", "{4F20F105-D78B-4F42-803A-A6550F4BE4AF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ticketing.Tests", "Ticketing.Tests\Ticketing.Tests.csproj", "{EC98EBBE-3527-4EA5-B11A-55BD24ABC664}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5526C66C-52A6-4949-9195-43EF6192A1DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5526C66C-52A6-4949-9195-43EF6192A1DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5526C66C-52A6-4949-9195-43EF6192A1DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5526C66C-52A6-4949-9195-43EF6192A1DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7D08B88-3901-4BEF-B7C2-91346FD3857F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7D08B88-3901-4BEF-B7C2-91346FD3857F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7D08B88-3901-4BEF-B7C2-91346FD3857F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7D08B88-3901-4BEF-B7C2-91346FD3857F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B254F76-4CDC-47D2-84AD-46B999E33C70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B254F76-4CDC-47D2-84AD-46B999E33C70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B254F76-4CDC-47D2-84AD-46B999E33C70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B254F76-4CDC-47D2-84AD-46B999E33C70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F20F105-D78B-4F42-803A-A6550F4BE4AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F20F105-D78B-4F42-803A-A6550F4BE4AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F20F105-D78B-4F42-803A-A6550F4BE4AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F20F105-D78B-4F42-803A-A6550F4BE4AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC98EBBE-3527-4EA5-B11A-55BD24ABC664}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC98EBBE-3527-4EA5-B11A-55BD24ABC664}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC98EBBE-3527-4EA5-B11A-55BD24ABC664}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC98EBBE-3527-4EA5-B11A-55BD24ABC664}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

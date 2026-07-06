@@ -1,3 +1,102 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+/* ============================================================
+   Themes — switched via the data-theme attribute on <html>.
+   Each theme changes not only the palette but also the overall
+   "feel": corner radius, typography, borders and shadows.
+   ============================================================ */
+
+:root,
+[data-theme="indigo"] {
+  --c-brand: #4f46e5;
+  --c-brand-hover: #4338ca;
+  --c-brand-light: #a5b4fc;
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+  --c-error: #dc2626;
+  --c-info: #2563eb;
+  --c-page-bg: #f8fafc;
+}
+
+/* Indigo: clean, modern, soft cards (Tailwind defaults, no overrides needed). */
+
+/* Emerald: soft & friendly — rounder corners, deeper shadows, borderless cards. */
+[data-theme="emerald"] {
+  --c-brand: #10b981;
+  --c-brand-hover: #059669;
+  --c-brand-light: #6ee7b7;
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+  --c-error: #dc2626;
+  --c-info: #0ea5e9;
+  --c-page-bg: #ecfdf5;
+}
+[data-theme="emerald"] .rounded-lg,
+[data-theme="emerald"] .rounded-xl {
+  border-radius: 1.25rem !important;
+}
+[data-theme="emerald"] .shadow-sm {
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12) !important;
+}
+[data-theme="emerald"] .border-gray-100,
+[data-theme="emerald"] .border-gray-200 {
+  border-color: transparent !important;
+}
+
+/* Amber: warm, editorial — serif headings, tighter radius. */
+[data-theme="amber"] {
+  --c-brand: #d97706;
+  --c-brand-hover: #b45309;
+  --c-brand-light: #fcd34d;
+  --c-success: #16a34a;
+  --c-warning: #ca8a04;
+  --c-error: #dc2626;
+  --c-info: #2563eb;
+  --c-page-bg: #fffdf5;
+}
+[data-theme="amber"] h1,
+[data-theme="amber"] h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.01em;
+}
+[data-theme="amber"] .rounded-lg {
+  border-radius: 0.375rem !important;
+}
+
+/* Mono: stark wireframe — monospace, square corners, flat, black borders. */
+[data-theme="mono"] {
+  --c-brand: #111827;
+  --c-brand-hover: #000000;
+  --c-brand-light: #9ca3af;
+  --c-success: #166534;
+  --c-warning: #92400e;
+  --c-error: #991b1b;
+  --c-info: #1e40af;
+  --c-page-bg: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+[data-theme="mono"] .rounded,
+[data-theme="mono"] .rounded-md,
+[data-theme="mono"] .rounded-lg,
+[data-theme="mono"] .rounded-xl,
+[data-theme="mono"] .rounded-full {
+  border-radius: 0 !important;
+}
+[data-theme="mono"] .shadow-sm,
+[data-theme="mono"] .shadow,
+[data-theme="mono"] .shadow-lg,
+[data-theme="mono"] .shadow-xl {
+  box-shadow: none !important;
+}
+[data-theme="mono"] .border,
+[data-theme="mono"] .border-gray-100,
+[data-theme="mono"] .border-gray-200,
+[data-theme="mono"] .border-gray-300 {
+  border-color: #111827 !important;
+}
+
+body {
+  background-color: var(--c-page-bg);
+}

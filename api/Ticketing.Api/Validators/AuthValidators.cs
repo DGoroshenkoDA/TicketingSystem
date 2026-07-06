@@ -47,3 +47,11 @@ public class LogoutRequestValidator : AbstractValidator<LogoutRequest>
         RuleFor(x => x.RefreshToken).NotEmpty().WithMessage("Refresh token is required.");
     }
 }
+
+public class ResendVerificationRequestValidator : AbstractValidator<ResendVerificationRequest>
+{
+    public ResendVerificationRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().WithMessage("Email is required.");
+    }
+}

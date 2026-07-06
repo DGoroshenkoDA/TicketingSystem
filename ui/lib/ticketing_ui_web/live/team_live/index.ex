@@ -60,12 +60,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
   def render(assigns) do
     ~H"""
     <div class="py-8">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Teams</h1>
-        <.link navigate={~p"/epics"} class="text-sm font-medium text-brand hover:underline">
-          Manage epics
-        </.link>
-      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Teams</h1>
 
       <form phx-submit="create" class="mt-4 flex gap-2">
         <input

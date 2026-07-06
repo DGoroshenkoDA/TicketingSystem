@@ -12,6 +12,7 @@ public class TicketingDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Epic> Epics => Set<Epic>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
@@ -39,6 +40,18 @@ public class TicketingDbContext : DbContext
             e.HasOne(r => r.User)
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailVerificationToken>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Id).ValueGeneratedNever();
+            e.HasIndex(t => t.UserId);
+            e.HasIndex(t => t.TokenHash);
+            e.HasOne(t => t.User)
+                .WithMany(u => u.EmailVerificationTokens)
+                .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

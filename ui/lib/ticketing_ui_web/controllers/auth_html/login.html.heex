@@ -42,6 +42,24 @@
     </button>
   </form>
 
+  <div class="mt-6 border-t border-gray-100 pt-4 text-center">
+    <p class="text-sm text-gray-500">Account not verified?</p>
+    <form action="/resend-verification" method="post" class="mt-2 flex gap-2">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <input
+        type="email"
+        name="email"
+        value={@email}
+        placeholder="name@example.com"
+        required
+        class="flex-1 rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
+      />
+      <button type="submit" class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+        Resend email
+      </button>
+    </form>
+  </div>
+
   <p class="mt-4 text-center text-sm text-gray-500">
     No account?
     <a href="/signup" class="font-medium text-brand hover:underline">Create one</a>

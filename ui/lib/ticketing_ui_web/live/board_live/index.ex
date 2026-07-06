@@ -266,16 +266,12 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
     ~H"""
     <div class="py-6">
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">Board</h1>
-          <div class="mt-2 flex gap-3 text-sm">
-            <.link navigate={~p"/teams"} class="text-brand hover:underline">Teams</.link>
-            <.link navigate={~p"/epics"} class="text-brand hover:underline">Epics</.link>
-          </div>
-        </div>
+      <p :if={@teams == []} class="mt-2 text-gray-500">
+        Create a team first on the <.link navigate={~p"/teams"} class="text-brand underline">Teams</.link> page.
+      </p>
 
-        <form :if={@teams != []} id="board-team-select" phx-change="select_team">
+      <div :if={@selected_team_id} class="flex flex-wrap items-end gap-3">
+        <form id="board-team-select" phx-change="select_team">
           <label class="block text-xs font-medium text-gray-500">Team</label>
           <select name="team_id" class="mt-1 rounded-lg border-gray-300 focus:border-brand focus:ring-brand">
             <option :for={team <- @teams} value={team["id"]} selected={team["id"] == @selected_team_id}>
@@ -283,13 +279,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
             </option>
           </select>
         </form>
-      </div>
 
-      <p :if={@teams == []} class="mt-8 text-gray-500">
-        Create a team first on the <.link navigate={~p"/teams"} class="text-brand underline">Teams</.link> page.
-      </p>
-
-      <div :if={@selected_team_id} class="mt-4 flex flex-wrap items-end gap-3">
         <form id="board-filters" phx-change="filter" class="flex flex-wrap items-end gap-3">
           <div>
             <label class="block text-xs font-medium text-gray-500">Type</label>

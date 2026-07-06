@@ -79,4 +79,34 @@ defmodule TicketingUiWeb.AuthControllerTest do
 
     assert html_response(conn, 200) =~ "already registered"
   end
+
+  test "verify with a valid token shows the verified screen", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "GET", "/api/v1/auth/verify", fn c ->
+      json(c, 200, %{success: true, data: %{verified: true}})
+    end)
+
+    conn = get(conn, "/verify", %{"token" => "good-token"})
+
+    assert html_response(conn, 200) =~ "Email verified"
+  end
+
+  test "verify with an invalid token shows the error screen", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "GET", "/api/v1/auth/verify", fn c ->
+      json(c, 400, %{success: false, code: "Auth.InvalidVerificationToken", detail: "invalid"})
+    end)
+
+    conn = get(conn, "/verify", %{"token" => "bad"})
+
+    assert html_response(conn, 200) =~ "Expired or invalid link"
+  end
+
+  test "resend verification redirects to login", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/api/v1/auth/resend-verification", fn c ->
+      json(c, 200, %{success: true, data: %{sent: true}})
+    end)
+
+    conn = post(conn, "/resend-verification", %{"email" => "a@b.com"})
+
+    assert redirected_to(conn) == "/login"
+  end
 end

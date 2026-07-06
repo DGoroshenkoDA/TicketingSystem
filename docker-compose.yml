@@ -26,6 +26,13 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-ticketing-api}
       Jwt__Audience: ${JWT_AUDIENCE:-ticketing-ui}
       Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-120}
+      App__UiBaseUrl: ${APP_UI_BASE_URL:-http://localhost:4000}
+      App__RequireEmailVerification: ${APP_REQUIRE_EMAIL_VERIFICATION:-true}
+      Smtp__Host: ${SMTP_HOST:-relay1.dataart.com}
+      Smtp__Port: ${SMTP_PORT:-25}
+      Smtp__From: ${SMTP_FROM:-no-reply@ticketing.local}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
     ports:
       - "5080:8080"
     depends_on:

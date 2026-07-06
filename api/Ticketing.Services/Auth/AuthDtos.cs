@@ -8,6 +8,8 @@ public record RefreshRequest(string RefreshToken);
 
 public record LogoutRequest(string RefreshToken);
 
+public record ResendVerificationRequest(string Email);
+
 public record UserDto(Guid Id, string Email, string DisplayName);
 
 public record AuthResult(

@@ -20,6 +20,9 @@ builder.Services.AddDbContext<TicketingDbContext>(options =>
 
 // --- Options + services ---
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
+builder.Services.Configure<Ticketing.Services.Email.SmtpOptions>(
+    builder.Configuration.GetSection(Ticketing.Services.Email.SmtpOptions.SectionName));
 builder.Services.AddTicketingServices();
 builder.Services.AddValidatorsFromAssemblyContaining<SignupRequestValidator>();
 

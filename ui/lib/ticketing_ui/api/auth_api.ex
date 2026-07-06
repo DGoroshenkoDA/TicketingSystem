@@ -34,6 +34,12 @@ defmodule TicketingUi.Api.AuthApi do
     HttpClient.post_json("/api/v1/auth/logout", %{refreshToken: refresh_token}, token: access_token)
   end
 
+  @spec verify(String.t()) :: {:ok, map()} | {:error, map()}
+  def verify(token), do: HttpClient.get_json("/api/v1/auth/verify", %{token: token})
+
+  @spec resend(String.t()) :: {:ok, map()} | {:error, map()}
+  def resend(email), do: HttpClient.post_json("/api/v1/auth/resend-verification", %{email: email})
+
   defp normalize_auth(data) do
     user = data["user"] || %{}
 

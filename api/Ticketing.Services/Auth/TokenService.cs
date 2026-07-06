@@ -48,10 +48,22 @@ public class TokenService : ITokenService
         var bytes = RandomNumberGenerator.GetBytes(32);
         var token = Convert.ToBase64String(bytes);
         var expiresAt = DateTime.UtcNow.AddDays(_options.RefreshTokenDays);
-        return (token, HashRefreshToken(token), expiresAt);
+        return (token, HashToken(token), expiresAt);
     }
 
-    public string HashRefreshToken(string token)
+    public (string Token, string TokenHash, DateTime ExpiresAt) CreateVerificationToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        // URL-safe token (used in the verification link).
+        var token = Convert.ToBase64String(bytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
+        var expiresAt = DateTime.UtcNow.AddHours(24);
+        return (token, HashToken(token), expiresAt);
+    }
+
+    public string HashToken(string token)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToHexString(hash);

@@ -2,6 +2,7 @@ defmodule TicketingUiWeb.Router do
   use TicketingUiWeb, :router
 
   import TicketingUiWeb.Auth
+  import TicketingUiWeb.Theme
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -11,6 +12,7 @@ defmodule TicketingUiWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_user
+    plug :fetch_theme
   end
 
   pipeline :api do
@@ -25,6 +27,14 @@ defmodule TicketingUiWeb.Router do
     post "/login", AuthController, :login_create
     get "/signup", AuthController, :signup_new
     post "/signup", AuthController, :signup_create
+    post "/resend-verification", AuthController, :resend
+  end
+
+  # Email verification landing (works whether signed in or not).
+  scope "/", TicketingUiWeb do
+    pipe_through :browser
+
+    get "/verify", AuthController, :verify
   end
 
   # Logout (available while signed in).
@@ -40,6 +50,11 @@ defmodule TicketingUiWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     get "/", PageController, :home
+
+    get "/profile", ProfileController, :show
+    post "/profile", ProfileController, :update
+    post "/profile/password", ProfileController, :change_password
+    post "/profile/theme", ProfileController, :set_theme
 
     live_session :authenticated,
       on_mount: [{TicketingUiWeb.Auth, :ensure_authenticated}] do

@@ -9,5 +9,8 @@ public interface ITokenService
     // Returns the raw refresh token (returned to the client) and its hash (stored in the DB).
     (string Token, string TokenHash, DateTime ExpiresAt) CreateRefreshToken();
 
-    string HashRefreshToken(string token);
+    // Returns a URL-safe email-verification token (valid 24h), its hash, and expiry.
+    (string Token, string TokenHash, DateTime ExpiresAt) CreateVerificationToken();
+
+    string HashToken(string token);
 }

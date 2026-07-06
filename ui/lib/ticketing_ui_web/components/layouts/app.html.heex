@@ -1,22 +1,34 @@
-<header class="border-b border-gray-100">
-  <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-    <a href="/" class="text-lg font-semibold text-brand">Ticketing System</a>
-
-    <div :if={@current_user} class="flex items-center gap-3 text-sm">
-      <span class="text-gray-600">{@current_user.name || @current_user.email}</span>
-      <form action="/logout" method="post">
-        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
-        <input type="hidden" name="_method" value="delete" />
-        <button type="submit" class="rounded-lg px-3 py-1 text-gray-600 hover:bg-gray-100">
-          Log out
-        </button>
-      </form>
+<header class="border-b border-gray-100 bg-white">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-6">
+      <a href="/board" class="text-lg font-semibold text-brand">Ticketing System</a>
+      <nav :if={@current_user} class="flex gap-4 text-sm">
+        <a href="/board" class="text-gray-600 hover:text-brand">Board</a>
+        <a href="/teams" class="text-gray-600 hover:text-brand">Teams</a>
+        <a href="/epics" class="text-gray-600 hover:text-brand">Epics</a>
+      </nav>
     </div>
+
+    <details :if={@current_user} class="relative">
+      <summary class="cursor-pointer list-none text-sm text-gray-600">
+        {@current_user.name || @current_user.email} ▾
+      </summary>
+      <div class="absolute right-0 z-10 mt-2 w-40 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+        <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</a>
+        <form action="/logout" method="post">
+          <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+          <input type="hidden" name="_method" value="delete" />
+          <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+            Log out
+          </button>
+        </form>
+      </div>
+    </details>
   </div>
 </header>
 
 <main class="px-4">
-  <div class="mx-auto max-w-5xl">
+  <div class="mx-auto max-w-6xl">
     <.flash_group flash={@flash} />
     {@inner_content}
   </div>

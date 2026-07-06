@@ -8,13 +8,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: "#6C5CE7",
-        "brand-hover": "#5A4BD1",
-        "brand-light": "#A29BFE",
-        success: "#00B894",
-        warning: "#FDCB6E",
-        error: "#FF7675",
-        info: "#74B9FF"
+        // Driven by CSS variables so the theme can be switched at runtime.
+        brand: "var(--c-brand)",
+        "brand-hover": "var(--c-brand-hover)",
+        "brand-light": "var(--c-brand-light)",
+        success: "var(--c-success)",
+        warning: "var(--c-warning)",
+        error: "var(--c-error)",
+        info: "var(--c-info)"
       }
     }
   },

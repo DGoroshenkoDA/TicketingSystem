@@ -65,3 +65,5 @@ Rules:
 - Tests are green.
 - If the schema changed — a migration is created and applied on startup.
 - `docker compose up --build` from a clean checkout brings up all three containers.
+
+## Imported Claude Cowork project instructions

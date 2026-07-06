@@ -1,7 +1,9 @@
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Ticketing.Data;
 using Ticketing.Data.Entities;
+using Ticketing.Services.Email;
 
 namespace Ticketing.Services.Auth;
 
@@ -10,12 +12,21 @@ public class AuthService : IAuthService
     private readonly TicketingDbContext _db;
     private readonly IPasswordHasher _hasher;
     private readonly ITokenService _tokens;
+    private readonly IEmailSender _email;
+    private readonly AppOptions _appOptions;
 
-    public AuthService(TicketingDbContext db, IPasswordHasher hasher, ITokenService tokens)
+    public AuthService(
+        TicketingDbContext db,
+        IPasswordHasher hasher,
+        ITokenService tokens,
+        IEmailSender email,
+        IOptions<AppOptions> appOptions)
     {
         _db = db;
         _hasher = hasher;
         _tokens = tokens;
+        _email = email;
+        _appOptions = appOptions.Value;
     }
 
     public async Task<ErrorOr<UserDto>> SignupAsync(SignupRequest request, CancellationToken ct = default)
@@ -36,12 +47,15 @@ public class AuthService : IAuthService
             EmailNormalized = normalized,
             DisplayName = request.DisplayName.Trim(),
             PasswordHash = _hasher.Hash(request.Password),
+            IsVerified = false,
             CreatedAt = now,
             ModifiedAt = now
         };
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);
+
+        await IssueVerificationAsync(user, ct);
 
         return new UserDto(user.Id, user.Email, user.DisplayName);
     }
@@ -56,12 +70,17 @@ public class AuthService : IAuthService
             return Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.");
         }
 
+        if (_appOptions.RequireEmailVerification && !user.IsVerified)
+        {
+            return Error.Forbidden("Auth.EmailNotVerified", "Please verify your email address before signing in.");
+        }
+
         return await IssueTokensAsync(user, ct);
     }
 
     public async Task<ErrorOr<AuthResult>> RefreshAsync(RefreshRequest request, CancellationToken ct = default)
     {
-        var hash = _tokens.HashRefreshToken(request.RefreshToken);
+        var hash = _tokens.HashToken(request.RefreshToken);
         var now = DateTime.UtcNow;
 
         var stored = await _db.RefreshTokens
@@ -73,14 +92,13 @@ public class AuthService : IAuthService
             return Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.");
         }
 
-        // Rotate: revoke the presented token and issue a fresh pair.
         stored.RevokedAt = now;
         return await IssueTokensAsync(stored.User, ct);
     }
 
     public async Task<ErrorOr<Success>> LogoutAsync(LogoutRequest request, CancellationToken ct = default)
     {
-        var hash = _tokens.HashRefreshToken(request.RefreshToken);
+        var hash = _tokens.HashToken(request.RefreshToken);
         var stored = await _db.RefreshTokens
             .FirstOrDefaultAsync(r => r.TokenHash == hash && r.RevokedAt == null, ct);
 
@@ -90,8 +108,77 @@ public class AuthService : IAuthService
             await _db.SaveChangesAsync(ct);
         }
 
-        // Idempotent: logging out an unknown/already-revoked token still succeeds.
         return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> VerifyEmailAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Error.Validation("Auth.InvalidVerificationToken", "The verification link is invalid.");
+        }
+
+        var hash = _tokens.HashToken(token);
+        var now = DateTime.UtcNow;
+
+        var stored = await _db.EmailVerificationTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+
+        if (stored is null || stored.UsedAt is not null || stored.ExpiresAt <= now || stored.User is null)
+        {
+            return Error.Validation("Auth.InvalidVerificationToken", "The verification link is invalid or has expired.");
+        }
+
+        stored.UsedAt = now;
+        stored.User.IsVerified = true;
+        stored.User.ModifiedAt = now;
+        await _db.SaveChangesAsync(ct);
+
+        return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> ResendVerificationAsync(string email, CancellationToken ct = default)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.EmailNormalized == normalized, ct);
+
+        // Do not reveal whether the account exists; always report success.
+        if (user is not null && !user.IsVerified)
+        {
+            await IssueVerificationAsync(user, ct);
+        }
+
+        return Result.Success;
+    }
+
+    private async Task IssueVerificationAsync(User user, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+
+        // Invalidate any earlier unused tokens for this user.
+        var active = await _db.EmailVerificationTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null)
+            .ToListAsync(ct);
+        foreach (var t in active)
+        {
+            t.UsedAt = now;
+        }
+
+        var (rawToken, tokenHash, expiresAt) = _tokens.CreateVerificationToken();
+        _db.EmailVerificationTokens.Add(new EmailVerificationToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            TokenHash = tokenHash,
+            ExpiresAt = expiresAt,
+            CreatedAt = now
+        });
+        await _db.SaveChangesAsync(ct);
+
+        var baseUrl = _appOptions.UiBaseUrl.TrimEnd('/');
+        var link = $"{baseUrl}/verify?token={rawToken}";
+        await _email.SendVerificationEmailAsync(user.Email, link, ct);
     }
 
     private async Task<AuthResult> IssueTokensAsync(User user, CancellationToken ct)

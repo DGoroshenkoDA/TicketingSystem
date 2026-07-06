@@ -4,7 +4,9 @@ using Ticketing.Data;
 using Ticketing.Data.Entities;
 using Ticketing.Services.Auth;
 using Ticketing.Services.Comments;
+using Ticketing.Services.Email;
 using Ticketing.Services.Epics;
+using Ticketing.Services.Profile;
 using Ticketing.Services.Teams;
 using Ticketing.Services.Tickets;
 
@@ -34,7 +36,11 @@ internal static class TestSupport
     public static IPasswordHasher NewHasher() => new Argon2idPasswordHasher();
 
     public static AuthService NewAuthService(TicketingDbContext db)
-        => new(db, NewHasher(), NewTokenService());
+        => NewAuthService(db, new FakeEmailSender());
+
+    public static AuthService NewAuthService(TicketingDbContext db, FakeEmailSender email)
+        => new(db, NewHasher(), NewTokenService(), email,
+            Options.Create(new AppOptions { UiBaseUrl = "http://localhost:4000" }));
 
     public static TeamService NewTeamService(TicketingDbContext db) => new(db);
 
@@ -43,6 +49,28 @@ internal static class TestSupport
     public static TicketService NewTicketService(TicketingDbContext db) => new(db);
 
     public static CommentService NewCommentService(TicketingDbContext db) => new(db);
+
+    public static ProfileService NewProfileService(TicketingDbContext db) => new(db, NewHasher());
+
+    // Adds a verified user with a real (hashed) password.
+    public static Guid AddUserWithPassword(TicketingDbContext db, string password, string email = "user@example.com")
+    {
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            EmailNormalized = email.Trim().ToLowerInvariant(),
+            DisplayName = "Test User",
+            PasswordHash = NewHasher().Hash(password),
+            IsVerified = true,
+            CreatedAt = now,
+            ModifiedAt = now
+        };
+        db.Users.Add(user);
+        db.SaveChanges();
+        return user.Id;
+    }
 
     public static Guid AddUser(TicketingDbContext db, string email = "user@example.com")
     {

@@ -58,7 +58,7 @@ public class TokenServiceTests
         var (token, tokenHash, expiresAt) = _tokens.CreateRefreshToken();
 
         Assert.True(expiresAt > DateTime.UtcNow);
-        Assert.Equal(tokenHash, _tokens.HashRefreshToken(token));
+        Assert.Equal(tokenHash, _tokens.HashToken(token));
     }
 
     [Fact]

@@ -37,7 +37,7 @@ defmodule TicketingUiWeb.AuthController do
     case AuthApi.signup(attrs) do
       {:ok, _user} ->
         conn
-        |> put_flash(:info, "Account created. Please sign in.")
+        |> put_flash(:info, "Account created. Check your email for a verification link, then sign in.")
         |> redirect(to: "/login")
 
       {:error, err} ->
@@ -51,5 +51,20 @@ defmodule TicketingUiWeb.AuthController do
     |> Auth.log_out()
     |> put_flash(:info, "Signed out.")
     |> redirect(to: "/login")
+  end
+
+  def resend(conn, params) do
+    _ = AuthApi.resend(params["email"] || "")
+
+    conn
+    |> put_flash(:info, "If that account exists and is unverified, a new verification email was sent.")
+    |> redirect(to: "/login")
+  end
+
+  def verify(conn, params) do
+    case AuthApi.verify(params["token"] || "") do
+      {:ok, _} -> render(conn, :verified)
+      {:error, _} -> render(conn, :verify_error)
+    end
   end
 end

@@ -1,0 +1,66 @@
+<div class="mx-auto max-w-xl py-8">
+  <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
+
+  <section class="mt-6 rounded-lg border border-gray-100 p-4">
+    <h2 class="font-medium text-gray-900">Account</h2>
+    <p class="mt-1 text-sm text-gray-500">Email: {@profile["email"]}</p>
+
+    <form action="/profile" method="post" class="mt-4 space-y-3">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Display name</label>
+        <input
+          type="text"
+          name="display_name"
+          value={@profile["displayName"]}
+          required
+          class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
+        />
+      </div>
+      <button type="submit" class="rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover">
+        Save
+      </button>
+    </form>
+  </section>
+
+  <section class="mt-6 rounded-lg border border-gray-100 p-4">
+    <h2 class="font-medium text-gray-900">Change password</h2>
+    <form action="/profile/password" method="post" class="mt-4 space-y-3">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Current password</label>
+        <input type="password" name="current_password" required autocomplete="current-password"
+          class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">New password</label>
+        <input type="password" name="new_password" required minlength="8" autocomplete="new-password"
+          class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand" />
+        <p class="mt-1 text-xs text-gray-400">At least 8 characters.</p>
+      </div>
+      <button type="submit" class="rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover">
+        Change password
+      </button>
+    </form>
+  </section>
+
+  <section class="mt-6 rounded-lg border border-gray-100 p-4">
+    <h2 class="font-medium text-gray-900">Appearance</h2>
+    <p class="mt-1 text-sm text-gray-500">Pick a theme. Your choice is saved in a cookie.</p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <form :for={theme <- @themes} action="/profile/theme" method="post">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <input type="hidden" name="theme" value={theme} />
+        <button
+          type="submit"
+          class={[
+            "rounded-lg border px-4 py-2 text-sm capitalize",
+            theme == @current_theme && "border-brand bg-brand text-white" || "border-gray-300 text-gray-700 hover:bg-gray-50"
+          ]}
+        >
+          {theme}
+        </button>
+      </form>
+    </div>
+  </section>
+</div>

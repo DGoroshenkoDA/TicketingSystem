@@ -8,4 +8,6 @@ public interface IAuthService
     Task<ErrorOr<AuthResult>> LoginAsync(LoginRequest request, CancellationToken ct = default);
     Task<ErrorOr<AuthResult>> RefreshAsync(RefreshRequest request, CancellationToken ct = default);
     Task<ErrorOr<Success>> LogoutAsync(LogoutRequest request, CancellationToken ct = default);
+    Task<ErrorOr<Success>> VerifyEmailAsync(string token, CancellationToken ct = default);
+    Task<ErrorOr<Success>> ResendVerificationAsync(string email, CancellationToken ct = default);
 }

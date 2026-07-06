@@ -82,12 +82,7 @@ defmodule TicketingUiWeb.EpicLive.Index do
   def render(assigns) do
     ~H"""
     <div class="py-8">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Epics</h1>
-        <.link navigate={~p"/teams"} class="text-sm font-medium text-brand hover:underline">
-          Manage teams
-        </.link>
-      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Epics</h1>
 
       <p :if={@teams == []} class="mt-8 text-gray-500">
         Create a team first, then add epics to it.

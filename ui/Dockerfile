@@ -55,4 +55,8 @@ WORKDIR /app
 ENV MIX_ENV="prod"
 ENV PHX_SERVER="true"
 
-COPY --from=build /app/_build/${MIX
+COPY --from=build /app/_build/${MIX_ENV}/rel/ticketing_ui ./
+
+EXPOSE 4000
+
+CMD ["/app/bin/ticketing_ui", "start"]

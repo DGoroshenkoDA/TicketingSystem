@@ -20,4 +20,28 @@ public class HealthEndpointTests : IClassFixture<HealthEndpointTests.TestAppFact
     }
 
     [Fact]
-    public async Tas
+    public async Task Health_Returns_Ok()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    public class TestAppFactory : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    // A syntactically valid connection string; never actually connected to.
+                    ["ConnectionStrings:Default"] = "Host=localhost;Database=test;Username=test;Password=test"
+                });
+            });
+        }
+    }
+}

@@ -111,6 +111,19 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
   def handle_event("close_modal", _params, socket), do: {:noreply, assign(socket, modal: nil)}
 
+  # Drag & drop: persist the new state immediately.
+  def handle_event("move_ticket", %{"id" => id, "state" => state}, socket) do
+    case TicketsApi.update_state(token(socket), id, state) do
+      {:ok, _} ->
+        # Reload so the moved card lands in the target column (top, by modified_at).
+        {:noreply, load_tickets(socket)}
+
+      {:error, err} ->
+        # Server state is unchanged; the re-render returns the card to its column.
+        {:noreply, put_flash(socket, :error, err[:detail] || "Could not move the ticket.")}
+    end
+  end
+
   # Track modal field changes; reloading epics and clearing the epic when team changes.
   def handle_event("modal_change", params, socket) do
     prev = socket.assigns.modal_form
@@ -283,8 +296,8 @@ defmodule TicketingUiWeb.BoardLive.Index do
         </button>
       </div>
 
-      <div :if={@selected_team_id} class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div :for={{state, label} <- @states} class="rounded-lg bg-gray-50 p-3">
+      <div :if={@selected_team_id} id="kanban" phx-hook="Board" class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div :for={{state, label} <- @states} data-state={state} class="rounded-lg bg-gray-50 p-3">
           <h2 class="flex items-center justify-between text-sm font-semibold text-gray-700">
             {label}
             <span class="rounded-full bg-gray-200 px-2 text-xs text-gray-600">
@@ -295,9 +308,10 @@ defmodule TicketingUiWeb.BoardLive.Index do
           <div class="mt-3 space-y-2">
             <button
               :for={ticket <- tickets_in(@tickets, state)}
+              data-ticket-id={ticket["id"]}
               phx-click="open_ticket"
               phx-value-id={ticket["id"]}
-              class="block w-full rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm hover:border-brand"
+              class="block w-full cursor-grab rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm hover:border-brand active:cursor-grabbing"
             >
               <div class="flex items-center gap-2">
                 <span class={["rounded px-1.5 py-0.5 text-xs font-medium", type_class(ticket["type"])]}>

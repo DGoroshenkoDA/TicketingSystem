@@ -100,4 +100,40 @@ defmodule TicketingUiWeb.BoardLiveTest do
 
     assert html =~ "Ticket saved."
   end
+
+  test "moving a ticket patches its state", %{conn: conn, bypass: bypass} do
+    stub_common(bypass)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets", fn c ->
+      json(c, 200, %{success: true, data: [ticket()]})
+    end)
+
+    Bypass.expect_once(bypass, "PATCH", "/api/v1/tickets/tk-1/state", fn c ->
+      json(c, 200, %{success: true, data: ticket(%{state: "done"})})
+    end)
+
+    {:ok, view, _html} = live(authed(conn), "/board")
+
+    html = render_hook(view, "move_ticket", %{"id" => "tk-1", "state" => "done"})
+
+    assert html =~ "First ticket"
+  end
+
+  test "a failed move shows an error", %{conn: conn, bypass: bypass} do
+    stub_common(bypass)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets", fn c ->
+      json(c, 200, %{success: true, data: [ticket()]})
+    end)
+
+    Bypass.expect_once(bypass, "PATCH", "/api/v1/tickets/tk-1/state", fn c ->
+      json(c, 400, %{success: false, code: "Ticket.InvalidState", detail: "Move failed."})
+    end)
+
+    {:ok, view, _html} = live(authed(conn), "/board")
+
+    html = render_hook(view, "move_ticket", %{"id" => "tk-1", "state" => "done"})
+
+    assert html =~ "Move failed."
+  end
 end

@@ -29,6 +29,6 @@ RUN apt-get update \
 COPY --from=build /app/publish .
 
 EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+# The .NET 8 runtime image already binds http://+:8080 via ASPNETCORE_HTTP_PORTS.
 
 ENTRYPOINT ["dotnet", "Ticketing.Api.dll"]

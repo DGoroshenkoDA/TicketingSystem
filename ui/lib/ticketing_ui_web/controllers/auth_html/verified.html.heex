@@ -1,13 +1,16 @@
-<div class="mx-auto max-w-sm py-16 text-center">
-  <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 text-3xl text-gray-700">
-    ✓
+<.auth_shell>
+  <div class="text-center">
+    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <.icon name="check" class="h-7 w-7" />
+    </div>
+    <h1 class="mt-5 text-2xl font-bold text-slate-900">Email verified</h1>
+    <p class="mt-2 text-sm text-slate-500">Your account is ready to use.</p>
+
+    <a
+      href="/login"
+      class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
+    >
+      <.icon name="login" class="h-5 w-5" /> Continue to login
+    </a>
   </div>
-  <h1 class="mt-6 text-2xl font-bold text-gray-900">Email verified</h1>
-  <p class="mt-2 text-gray-600">Your account is ready to use.</p>
-  <a
-    href="/login"
-    class="mt-6 inline-block rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover"
-  >
-    Continue to login
-  </a>
-</div>
+</.auth_shell>

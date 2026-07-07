@@ -3,7 +3,7 @@ defmodule TicketingUiWeb.Theme do
 
   import Plug.Conn
 
-  @themes ~w(indigo emerald amber mono)
+  @themes ~w(indigo amber)
   @default "indigo"
   @cookie "theme"
 

@@ -74,6 +74,9 @@ defmodule TicketingUiWeb.EpicLiveTest do
 
     {:ok, view, _html} = live(authed(conn), "/epics")
 
+    # Creating an epic now happens in the right-side panel opened from "Create epic".
+    view |> element("button", "Create epic") |> render_click()
+
     html =
       view
       |> form("form[phx-submit=create]", %{title: "Brand new", description: "Because"})

@@ -26,6 +26,14 @@ public class TicketService : ITicketService
         t.CreatedAt,
         t.ModifiedAt);
 
+    private static readonly Expression<Func<TicketHistory, TicketHistoryDto>> HistoryProjection = h => new TicketHistoryDto(
+        h.Id,
+        h.Field,
+        h.OldValue,
+        h.NewValue,
+        h.ChangedByUser != null ? h.ChangedByUser.DisplayName : null,
+        h.ChangedAt);
+
     public async Task<ErrorOr<List<TicketDto>>> ListAsync(TicketQuery query, CancellationToken ct = default)
     {
         var q = _db.Tickets.Where(t => t.TeamId == query.TeamId);
@@ -114,7 +122,7 @@ public class TicketService : ITicketService
         return (await _db.Tickets.Where(t => t.Id == ticket.Id).Select(Projection).FirstAsync(ct));
     }
 
-    public async Task<ErrorOr<TicketDto>> UpdateAsync(Guid id, UpdateTicketRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<TicketDto>> UpdateAsync(Guid id, UpdateTicketRequest request, Guid changedBy, CancellationToken ct = default)
     {
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (ticket is null)
@@ -155,30 +163,67 @@ public class TicketService : ITicketService
             return err;
         }
 
-        var changed =
-            ticket.TeamId != request.TeamId ||
-            ticket.Type != request.Type ||
-            ticket.State != request.State ||
-            ticket.EpicId != request.EpicId ||
-            ticket.Title != title ||
-            ticket.Body != request.Body;
+        // Per-field change detection: drives both the modified_at guard and the audit log.
+        var teamChanged = ticket.TeamId != request.TeamId;
+        var typeChanged = ticket.Type != request.Type;
+        var stateChanged = ticket.State != request.State;
+        var epicChanged = ticket.EpicId != request.EpicId;
+        var titleChanged = ticket.Title != title;
+        var bodyChanged = ticket.Body != request.Body;
+
+        var changed = teamChanged || typeChanged || stateChanged || epicChanged || titleChanged || bodyChanged;
 
         if (changed)
         {
+            var now = DateTime.UtcNow;
+            var history = new List<TicketHistory>();
+
+            void Log(string field, string? oldValue, string? newValue) =>
+                history.Add(new TicketHistory
+                {
+                    Id = Guid.NewGuid(),
+                    TicketId = ticket.Id,
+                    ChangedBy = changedBy,
+                    ChangedAt = now,
+                    Field = field,
+                    OldValue = oldValue,
+                    NewValue = newValue
+                });
+
+            // Simple text/enum fields store their raw values.
+            if (titleChanged) Log("title", ticket.Title, title);
+            if (bodyChanged) Log("body", ticket.Body, request.Body);
+            if (typeChanged) Log("type", ticket.Type, request.Type);
+            if (stateChanged) Log("state", ticket.State, request.State);
+
+            // Epic/team store human-readable names resolved with one batched lookup each.
+            if (epicChanged)
+            {
+                var (oldEpic, newEpic) = await ResolveEpicValuesAsync(ticket.EpicId, request.EpicId, ct);
+                Log("epic", oldEpic, newEpic);
+            }
+
+            if (teamChanged)
+            {
+                var (oldTeam, newTeam) = await ResolveTeamValuesAsync(ticket.TeamId, request.TeamId, ct);
+                Log("team", oldTeam, newTeam);
+            }
+
             ticket.TeamId = request.TeamId;
             ticket.Type = request.Type;
             ticket.State = request.State;
             ticket.EpicId = request.EpicId;
             ticket.Title = title;
             ticket.Body = request.Body;
-            ticket.ModifiedAt = DateTime.UtcNow;
+            ticket.ModifiedAt = now;
+            _db.TicketHistory.AddRange(history);
             await _db.SaveChangesAsync(ct);
         }
 
         return await _db.Tickets.Where(t => t.Id == id).Select(Projection).FirstAsync(ct);
     }
 
-    public async Task<ErrorOr<TicketDto>> UpdateStateAsync(Guid id, UpdateTicketStateRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<TicketDto>> UpdateStateAsync(Guid id, UpdateTicketStateRequest request, Guid changedBy, CancellationToken ct = default)
     {
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (ticket is null)
@@ -193,12 +238,38 @@ public class TicketService : ITicketService
 
         if (ticket.State != request.State)
         {
+            var now = DateTime.UtcNow;
+            _db.TicketHistory.Add(new TicketHistory
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticket.Id,
+                ChangedBy = changedBy,
+                ChangedAt = now,
+                Field = "state",
+                OldValue = ticket.State,
+                NewValue = request.State
+            });
             ticket.State = request.State;
-            ticket.ModifiedAt = DateTime.UtcNow;
+            ticket.ModifiedAt = now;
             await _db.SaveChangesAsync(ct);
         }
 
         return await _db.Tickets.Where(t => t.Id == id).Select(Projection).FirstAsync(ct);
+    }
+
+    public async Task<ErrorOr<List<TicketHistoryDto>>> GetHistoryAsync(Guid ticketId, CancellationToken ct = default)
+    {
+        if (!await _db.Tickets.AnyAsync(t => t.Id == ticketId, ct))
+        {
+            return Error.NotFound("Ticket.NotFound", "Ticket not found.");
+        }
+
+        return await _db.TicketHistory
+            .Where(h => h.TicketId == ticketId)
+            .OrderByDescending(h => h.ChangedAt)
+            .ThenByDescending(h => h.Id)
+            .Select(HistoryProjection)
+            .ToListAsync(ct);
     }
 
     public async Task<ErrorOr<Success>> DeleteAsync(Guid id, CancellationToken ct = default)
@@ -234,5 +305,35 @@ public class TicketService : ITicketService
         }
 
         return null;
+    }
+
+    // Resolves the display values for an epic change in a single query.
+    // A null epic id means "no epic" and is recorded as "None".
+    private async Task<(string? Old, string? New)> ResolveEpicValuesAsync(Guid? oldId, Guid? newId, CancellationToken ct)
+    {
+        var ids = new List<Guid>();
+        if (oldId is { } o) ids.Add(o);
+        if (newId is { } n) ids.Add(n);
+
+        var titles = ids.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.Epics
+                .Where(e => ids.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id, e => e.Title, ct);
+
+        string? Resolve(Guid? epicId) =>
+            epicId is { } id ? titles.GetValueOrDefault(id) : "None";
+
+        return (Resolve(oldId), Resolve(newId));
+    }
+
+    // Resolves the team names for a team change in a single query.
+    private async Task<(string? Old, string? New)> ResolveTeamValuesAsync(Guid oldId, Guid newId, CancellationToken ct)
+    {
+        var names = await _db.Teams
+            .Where(t => t.Id == oldId || t.Id == newId)
+            .ToDictionaryAsync(t => t.Id, t => t.Name, ct);
+
+        return (names.GetValueOrDefault(oldId), names.GetValueOrDefault(newId));
     }
 }

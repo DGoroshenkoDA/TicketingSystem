@@ -17,6 +17,7 @@ public class TicketingDbContext : DbContext
     public DbSet<Epic> Epics => Set<Epic>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<TicketHistory> TicketHistory => Set<TicketHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,6 +126,24 @@ public class TicketingDbContext : DbContext
             e.HasOne(x => x.Author)
                 .WithMany()
                 .HasForeignKey(x => x.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TicketHistory>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedNever();
+            e.HasIndex(x => new { x.TicketId, x.ChangedAt });
+
+            e.HasOne(x => x.Ticket)
+                .WithMany()
+                .HasForeignKey(x => x.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict from user to avoid a second cascade path into ticket_history.
+            e.HasOne(x => x.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ChangedBy)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

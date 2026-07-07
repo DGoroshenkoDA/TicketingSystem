@@ -21,3 +21,11 @@ public record UpdateTicketRequest(Guid TeamId, string Type, Guid? EpicId, string
 public record UpdateTicketStateRequest(string State);
 
 public record TicketQuery(Guid TeamId, string? Type, Guid? EpicId, string? Search);
+
+public record TicketHistoryDto(
+    Guid Id,
+    string Field,
+    string? OldValue,
+    string? NewValue,
+    string? ChangedByName,
+    DateTime ChangedAt);

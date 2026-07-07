@@ -52,6 +52,13 @@ public class TicketsController : ControllerBase
         return result.IsError ? ApiResults.Failure(result.FirstError) : ApiResults.Success(result.Value);
     }
 
+    [HttpGet("{id:guid}/history")]
+    public async Task<IActionResult> History(Guid id, CancellationToken ct)
+    {
+        var result = await _tickets.GetHistoryAsync(id, ct);
+        return result.IsError ? ApiResults.Failure(result.FirstError) : ApiResults.Success(result.Value);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTicketRequest request, CancellationToken ct)
     {
@@ -81,7 +88,12 @@ public class TicketsController : ControllerBase
             return ApiResults.ValidationFailure(validation.Errors[0].ErrorMessage);
         }
 
-        var result = await _tickets.UpdateAsync(id, request, ct);
+        if (CurrentUserId() is not { } userId)
+        {
+            return ApiResults.ValidationFailure("Could not determine the authenticated user.");
+        }
+
+        var result = await _tickets.UpdateAsync(id, request, userId, ct);
         return result.IsError ? ApiResults.Failure(result.FirstError) : ApiResults.Success(result.Value);
     }
 
@@ -94,7 +106,12 @@ public class TicketsController : ControllerBase
             return ApiResults.ValidationFailure(validation.Errors[0].ErrorMessage);
         }
 
-        var result = await _tickets.UpdateStateAsync(id, request, ct);
+        if (CurrentUserId() is not { } userId)
+        {
+            return ApiResults.ValidationFailure("Could not determine the authenticated user.");
+        }
+
+        var result = await _tickets.UpdateStateAsync(id, request, userId, ct);
         return result.IsError ? ApiResults.Failure(result.FirstError) : ApiResults.Success(result.Value);
     }
 

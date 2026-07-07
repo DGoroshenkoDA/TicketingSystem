@@ -1,7 +1,15 @@
 <header class="border-b border-gray-100 bg-white">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <div class="flex items-center gap-6">
-      <a href="/board" class="text-lg font-semibold text-brand">Ticketing System</a>
+      <a href="/board" class="flex items-center gap-2.5 text-lg font-semibold text-slate-900">
+        <svg viewBox="0 0 24 24" class="h-7 w-7" aria-hidden="true">
+          <rect x="2" y="3" width="9" height="9" rx="2" fill="#4f46e5" />
+          <rect x="13" y="3" width="9" height="6" rx="2" fill="#f59e0b" />
+          <rect x="2" y="14" width="9" height="7" rx="2" fill="#10b981" />
+          <rect x="13" y="11" width="9" height="10" rx="2" fill="#ef4444" />
+        </svg>
+        Ticketing System
+      </a>
       <nav :if={@current_user} class="flex gap-4 text-sm">
         <a href="/board" class="text-gray-600 hover:text-brand">Board</a>
         <a href="/teams" class="text-gray-600 hover:text-brand">Teams</a>

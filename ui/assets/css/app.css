@@ -10,40 +10,17 @@
 
 :root,
 [data-theme="indigo"] {
-  --c-brand: #4f46e5;
-  --c-brand-hover: #4338ca;
-  --c-brand-light: #a5b4fc;
+  --c-brand: #2563eb;
+  --c-brand-hover: #1d4ed8;
+  --c-brand-light: #93c5fd;
   --c-success: #16a34a;
   --c-warning: #d97706;
   --c-error: #dc2626;
   --c-info: #2563eb;
-  --c-page-bg: #f8fafc;
+  --c-page-bg: #f1f5f9;
 }
 
-/* Indigo: clean, modern, soft cards (Tailwind defaults, no overrides needed). */
-
-/* Emerald: soft & friendly — rounder corners, deeper shadows, borderless cards. */
-[data-theme="emerald"] {
-  --c-brand: #10b981;
-  --c-brand-hover: #059669;
-  --c-brand-light: #6ee7b7;
-  --c-success: #16a34a;
-  --c-warning: #d97706;
-  --c-error: #dc2626;
-  --c-info: #0ea5e9;
-  --c-page-bg: #ecfdf5;
-}
-[data-theme="emerald"] .rounded-lg,
-[data-theme="emerald"] .rounded-xl {
-  border-radius: 1.25rem !important;
-}
-[data-theme="emerald"] .shadow-sm {
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12) !important;
-}
-[data-theme="emerald"] .border-gray-100,
-[data-theme="emerald"] .border-gray-200 {
-  border-color: transparent !important;
-}
+/* Indigo: clean, professional blue (matches the sign-in design); Tailwind defaults for cards. */
 
 /* Amber: warm, editorial — serif headings, tighter radius. */
 [data-theme="amber"] {
@@ -65,38 +42,63 @@
   border-radius: 0.375rem !important;
 }
 
-/* Mono: stark wireframe — monospace, square corners, flat, black borders. */
-[data-theme="mono"] {
-  --c-brand: #111827;
-  --c-brand-hover: #000000;
-  --c-brand-light: #9ca3af;
-  --c-success: #166534;
-  --c-warning: #92400e;
-  --c-error: #991b1b;
-  --c-info: #1e40af;
-  --c-page-bg: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-[data-theme="mono"] .rounded,
-[data-theme="mono"] .rounded-md,
-[data-theme="mono"] .rounded-lg,
-[data-theme="mono"] .rounded-xl,
-[data-theme="mono"] .rounded-full {
-  border-radius: 0 !important;
-}
-[data-theme="mono"] .shadow-sm,
-[data-theme="mono"] .shadow,
-[data-theme="mono"] .shadow-lg,
-[data-theme="mono"] .shadow-xl {
-  box-shadow: none !important;
-}
-[data-theme="mono"] .border,
-[data-theme="mono"] .border-gray-100,
-[data-theme="mono"] .border-gray-200,
-[data-theme="mono"] .border-gray-300 {
-  border-color: #111827 !important;
-}
-
 body {
   background-color: var(--c-page-bg);
+}
+
+/* ============================================================
+   Consistent form-control sizing across every page (matches the
+   board / ticket modal). Lives in @layer base so explicit utility
+   classes still win — e.g. the auth screens' roomier inputs, or the
+   ticket title's text-xl header.
+   ============================================================ */
+@layer base {
+  [type="text"],
+  [type="email"],
+  [type="password"],
+  [type="search"],
+  [type="number"],
+  select,
+  textarea {
+    border-radius: 0.5rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
+/* ============================================================
+   Password-criteria checklist (sign-up form). Rows toggle their
+   [data-met] attribute from JS; styling is driven purely by that.
+   ============================================================ */
+.crit {
+  color: #64748b; /* slate-500 */
+  transition: color 0.15s ease;
+}
+.crit .crit-ind {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 1.15rem;
+  width: 1.15rem;
+  border-radius: 9999px;
+  border: 2px solid #cbd5e1; /* slate-300 */
+  color: #fff;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.crit .crit-ind svg {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.crit[data-met="true"] {
+  color: #334155; /* slate-700 */
+}
+.crit[data-met="true"] .crit-ind {
+  background-color: var(--c-success);
+  border-color: var(--c-success);
+}
+.crit[data-met="true"] .crit-ind svg {
+  opacity: 1;
 }

@@ -63,6 +63,8 @@ defmodule TicketingUiWeb.TeamLiveTest do
 
     {:ok, view, _html} = live(authed(conn), "/teams")
 
+    # Creating a team now happens in a popup opened from the "Create team" button.
+    view |> element("button", "Create team") |> render_click()
     html = view |> form("form[phx-submit=create]", %{name: "Gamma"}) |> render_submit()
 
     assert html =~ "Team created."

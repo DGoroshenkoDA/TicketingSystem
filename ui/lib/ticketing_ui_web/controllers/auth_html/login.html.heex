@@ -1,9 +1,16 @@
-<div class="mx-auto max-w-sm py-16">
-  <h1 class="text-center text-2xl font-bold text-brand">Sign in</h1>
+<.auth_shell>
+  <h1 class="text-2xl font-bold text-brand">Welcome</h1>
+  <p class="mt-1.5 text-sm text-slate-500">
+    Sign in or create an account to start working with tickets.
+  </p>
+
+  <div class="mt-6">
+    <.auth_tabs active={:login} />
+  </div>
 
   <p
     :if={@error}
-    class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+    class="mt-5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
   >
     {@error}
   </p>
@@ -11,57 +18,49 @@
   <form action="/login" method="post" class="mt-6 space-y-4">
     <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Email</label>
-      <input
-        type="email"
-        name="email"
-        value={@email}
-        required
-        autocomplete="email"
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
-    </div>
+    <.input_field
+      label="Email"
+      name="email"
+      type="email"
+      icon="mail"
+      value={@email}
+      placeholder="you@company.com"
+      autocomplete="email"
+    />
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Password</label>
-      <input
-        type="password"
-        name="password"
-        required
-        autocomplete="current-password"
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
-    </div>
+    <.password_field
+      label="Password"
+      name="password"
+      id="login-password"
+      autocomplete="current-password"
+    />
 
-    <button
-      type="submit"
-      class="w-full rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover"
-    >
-      Sign in
-    </button>
+    <.submit_button icon="login" label="Sign In" />
   </form>
 
-  <div class="mt-6 border-t border-gray-100 pt-4 text-center">
-    <p class="text-sm text-gray-500">Account not verified?</p>
+  <div class="mt-6 border-t border-slate-100 pt-5">
+    <p class="text-sm text-slate-500">Haven't verified your email yet?</p>
     <form action="/resend-verification" method="post" class="mt-2 flex gap-2">
       <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
       <input
         type="email"
         name="email"
         value={@email}
-        placeholder="name@example.com"
+        placeholder="you@company.com"
         required
-        class="flex-1 rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
+        class="block w-full flex-1 rounded-lg border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand focus:ring-1 focus:ring-brand"
       />
-      <button type="submit" class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-        Resend email
+      <button
+        type="submit"
+        class="shrink-0 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+      >
+        Resend
       </button>
     </form>
   </div>
 
-  <p class="mt-4 text-center text-sm text-gray-500">
+  <p class="mt-5 text-center text-sm text-slate-500">
     No account?
     <a href="/signup" class="font-medium text-brand hover:underline">Create one</a>
   </p>
-</div>
+</.auth_shell>

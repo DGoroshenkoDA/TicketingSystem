@@ -1,9 +1,16 @@
-<div class="mx-auto max-w-sm py-16">
-  <h1 class="text-center text-2xl font-bold text-brand">Create account</h1>
+<.auth_shell>
+  <h1 class="text-2xl font-bold text-brand">Welcome</h1>
+  <p class="mt-1.5 text-sm text-slate-500">
+    Sign in or create an account to start working with tickets.
+  </p>
+
+  <div class="mt-6">
+    <.auth_tabs active={:signup} />
+  </div>
 
   <p
     :if={@error}
-    class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+    class="mt-5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
   >
     {@error}
   </p>
@@ -11,63 +18,58 @@
   <form action="/signup" method="post" class="mt-6 space-y-4">
     <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Email</label>
-      <input
-        type="email"
-        name="email"
-        value={@values["email"]}
-        required
-        autocomplete="email"
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
+    <.input_field
+      label="Name"
+      name="display_name"
+      icon="user"
+      value={@values["display_name"]}
+      placeholder="John Doe"
+      autocomplete="name"
+    />
+
+    <.input_field
+      label="Email"
+      name="email"
+      type="email"
+      icon="mail"
+      value={@values["email"]}
+      placeholder="you@company.com"
+      autocomplete="email"
+    />
+
+    <.password_field label="Password" name="password" id="signup-password" minlength="8" />
+
+    <div class="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Password criteria
+      </p>
+      <ul class="mt-2.5 space-y-1.5 text-sm text-slate-500" data-pw-criteria>
+        <li class="crit flex items-center gap-2.5" data-criterion="len">
+          <span class="crit-ind"><.icon name="check" class="h-3 w-3" /></span>
+          <span>Minimum 8 characters</span>
+        </li>
+        <li class="crit flex items-center gap-2.5" data-criterion="upper">
+          <span class="crit-ind"><.icon name="check" class="h-3 w-3" /></span>
+          <span>At least one uppercase (capital) letter</span>
+        </li>
+        <li class="crit flex items-center gap-2.5" data-criterion="special">
+          <span class="crit-ind"><.icon name="check" class="h-3 w-3" /></span>
+          <span>At least one special character</span>
+        </li>
+        <li class="crit flex items-center gap-2.5 border-t border-slate-200 pt-1.5" data-criterion="all">
+          <span class="crit-ind"><.icon name="check" class="h-3 w-3" /></span>
+          <span>All criteria met</span>
+        </li>
+      </ul>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Display name</label>
-      <input
-        type="text"
-        name="display_name"
-        value={@values["display_name"]}
-        required
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
-    </div>
+    <.password_field label="Confirm Password" name="password_confirm" id="signup-password-confirm" />
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Password</label>
-      <input
-        type="password"
-        name="password"
-        required
-        minlength="8"
-        autocomplete="new-password"
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
-      <p class="mt-1 text-xs text-gray-400">At least 8 characters.</p>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Confirm password</label>
-      <input
-        type="password"
-        name="password_confirm"
-        required
-        autocomplete="new-password"
-        class="mt-1 w-full rounded-lg border-gray-300 focus:border-brand focus:ring-brand"
-      />
-    </div>
-
-    <button
-      type="submit"
-      class="w-full rounded-lg bg-brand px-4 py-2 font-medium text-white hover:bg-brand-hover"
-    >
-      Create account
-    </button>
+    <.submit_button icon="user-plus" label="Create Account" data-signup-submit="true" />
   </form>
 
-  <p class="mt-4 text-center text-sm text-gray-500">
+  <p class="mt-5 text-center text-sm text-slate-500">
     Already have an account?
     <a href="/login" class="font-medium text-brand hover:underline">Sign in</a>
   </p>
-</div>
+</.auth_shell>

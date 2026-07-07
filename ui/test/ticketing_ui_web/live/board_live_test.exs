@@ -157,6 +157,10 @@ defmodule TicketingUiWeb.BoardLiveTest do
       json(c, 200, %{success: true, data: [comment()]})
     end)
 
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1/history", fn c ->
+      json(c, 200, %{success: true, data: []})
+    end)
+
     Bypass.expect_once(bypass, "POST", "/api/v1/tickets/tk-1/comments", fn c ->
       json(c, 201, %{success: true, data: comment("New")})
     end)
@@ -165,9 +169,55 @@ defmodule TicketingUiWeb.BoardLiveTest do
 
     html = view |> element("button[data-ticket-id='tk-1']") |> render_click()
     assert html =~ "Existing comment"
+    # Comment submit button was renamed from "Send" to "Add".
+    assert html =~ "Add"
 
     html2 = view |> form("#comment-form", %{body: "New"}) |> render_submit()
     assert html2 =~ "Existing comment"
+  end
+
+  test "opening a ticket loads and renders its change history", %{conn: conn, bypass: bypass} do
+    stub_common(bypass)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets", fn c ->
+      json(c, 200, %{success: true, data: [ticket()]})
+    end)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1", fn c ->
+      json(c, 200, %{success: true, data: ticket()})
+    end)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1/comments", fn c ->
+      json(c, 200, %{success: true, data: []})
+    end)
+
+    Bypass.expect(bypass, "GET", "/api/v1/tickets/tk-1/history", fn c ->
+      json(c, 200, %{
+        success: true,
+        data: [
+          %{
+            id: "h-1",
+            field: "state",
+            oldValue: "new",
+            newValue: "in_progress",
+            changedByName: "Alice",
+            changedAt: "2026-01-02T10:00:00Z"
+          }
+        ]
+      })
+    end)
+
+    {:ok, view, _html} = live(authed(conn), "/board")
+
+    html = view |> element("button[data-ticket-id='tk-1']") |> render_click()
+
+    assert html =~ "History"
+    # A change-log row: prettified field label + enum values (in the History tab panel).
+    assert html =~ "State"
+    assert html =~ "In progress"
+    # The base line built from the ticket itself.
+    assert html =~ "Created ticket"
+    assert html =~ "Alice"
   end
 
   test "type/epic/search filters re-query tickets together (AND semantics)", %{conn: conn, bypass: bypass} do

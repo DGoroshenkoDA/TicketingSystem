@@ -1,5 +1,6 @@
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
+using Ticketing.Data.Entities;
 using Ticketing.Services.Auth;
 using Xunit;
 
@@ -159,6 +160,35 @@ public class AuthServiceScenarioTests
     }
 
     [Fact]
+    public async Task Refresh_For_Unverified_User_Returns_Forbidden()
+    {
+        using var db = TestSupport.NewDb();
+        var tokens = TestSupport.NewTokenService();
+        // AddUser creates an unverified user (IsVerified defaults to false).
+        var userId = TestSupport.AddUser(db, "unverified@example.com");
+        var auth = TestSupport.NewAuthService(db);
+
+        const string raw = "a-valid-raw-refresh-token";
+        db.RefreshTokens.Add(new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TokenHash = tokens.HashToken(raw),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var result = await auth.RefreshAsync(new RefreshRequest(raw));
+
+        Assert.True(result.IsError);
+        Assert.Equal(ErrorType.Forbidden, result.FirstError.Type);
+        // No new tokens issued and the presented token is not rotated/revoked.
+        Assert.Equal(1, await db.RefreshTokens.CountAsync());
+        Assert.Equal(0, await db.RefreshTokens.CountAsync(r => r.RevokedAt != null));
+    }
+
+    [Fact]
     public async Task Logout_Revokes_Token_And_Is_Idempotent()
     {
         using var db = TestSupport.NewDb();
@@ -188,5 +218,63 @@ public class AuthServiceScenarioTests
         Assert.False(result.IsError);
         Assert.Equal(2, await db.EmailVerificationTokens.CountAsync());
         Assert.Equal(1, await db.EmailVerificationTokens.CountAsync(t => t.UsedAt != null));
+    }
+
+    [Fact]
+    public async Task Verify_Token_Is_Single_Use()
+    {
+        using var db = TestSupport.NewDb();
+        var email = new FakeEmailSender();
+        var auth = TestSupport.NewAuthService(db, email);
+        await auth.SignupAsync(Signup("single@example.com"));
+        var token = TokenFrom(email);
+
+        var first = await auth.VerifyEmailAsync(token);
+        var second = await auth.VerifyEmailAsync(token);
+
+        Assert.False(first.IsError);
+        Assert.True(second.IsError);
+        Assert.Equal(ErrorType.Validation, second.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task Verify_Expired_Token_Returns_Validation()
+    {
+        using var db = TestSupport.NewDb();
+        var auth = TestSupport.NewAuthService(db);
+        var tokens = TestSupport.NewTokenService();
+        var userId = TestSupport.AddUser(db, "expired@example.com");
+
+        const string raw = "an-expired-raw-token";
+        db.EmailVerificationTokens.Add(new EmailVerificationToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TokenHash = tokens.HashToken(raw),
+            ExpiresAt = DateTime.UtcNow.AddHours(-1),
+            CreatedAt = DateTime.UtcNow.AddHours(-25)
+        });
+        await db.SaveChangesAsync();
+
+        var result = await auth.VerifyEmailAsync(raw);
+
+        Assert.True(result.IsError);
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task Resend_For_Already_Verified_User_Is_NoOp_But_Succeeds()
+    {
+        using var db = TestSupport.NewDb();
+        var email = new FakeEmailSender();
+        var auth = TestSupport.NewAuthService(db, email);
+        await SignupAndVerify(auth, email, "done@example.com");
+        var tokenCountBefore = await db.EmailVerificationTokens.CountAsync();
+
+        var result = await auth.ResendVerificationAsync("done@example.com");
+
+        Assert.False(result.IsError);
+        // No new token is issued for an already-verified user.
+        Assert.Equal(tokenCountBefore, await db.EmailVerificationTokens.CountAsync());
     }
 }

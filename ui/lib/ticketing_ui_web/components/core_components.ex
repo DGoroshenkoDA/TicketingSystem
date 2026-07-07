@@ -1,7 +1,6 @@
 defmodule TicketingUiWeb.CoreComponents do
   @moduledoc """
-  Core UI components. Kept minimal for Phase 0; extended in later phases
-  (buttons, inputs, modals, tables).
+  Core UI components shared across the app (flash notices).
   """
   use Phoenix.Component
 

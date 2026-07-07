@@ -24,7 +24,7 @@ Layer rules: controllers are thin (model validation → service call → map res
 
 ## Authentication
 
-Simplified model (no email verification, no SMTP, no confirmation tokens).
+Email + password with email verification. Sign-up sends a verification email via SMTP; the account is blocked from the app until verified (when `APP_REQUIRE_EMAIL_VERIFICATION=true`). Verification tokens are single-use, expire after 24h, and only their hash is stored.
 
 **Create profile** — `POST /api/v1/auth/signup` **[public]**
 Fields: `email`, `displayName`, `password`, `passwordConfirm`.

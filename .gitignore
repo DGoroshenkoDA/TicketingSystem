@@ -1,6 +1,6 @@
 # === Secrets / environment ===
-# NOTE: .env is intentionally committed with dev-only values for easy testing
-# (see docs/DEFINITION_OF_DONE.md). Do not put real production secrets here.
+# .env holds local secrets and must NOT be committed. Only .env.example is tracked.
+.env
 *.pem
 *.key
 appsettings.*.local.json

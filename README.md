@@ -10,7 +10,7 @@ Everything runs in Docker; the whole stack starts from the repository root with 
 
 ## Features
 
-- **Accounts:** sign up (email, display name, password) and log in. Passwords are hashed with Argon2id; auth uses JWT access + refresh tokens (token stored in a server-side session cookie, never in the URL).
+- **Accounts:** sign up (email, display name, password), verify your email, and log in. Passwords are hashed with Argon2id; auth uses JWT access + refresh tokens (stored in a server-side session cookie, never in the URL, and transparently refreshed before expiry). Sign-up sends a verification email via SMTP; unverified accounts are blocked at login (single-use tokens, 24h expiry, resend supported).
 - **Teams:** list, create, rename, delete. Names are unique (case-insensitive). A team cannot be deleted while it has tickets or epics (HTTP 409); the delete button is disabled in the UI.
 - **Epics:** per-team CRUD. The team is fixed after creation. An epic cannot be deleted while tickets reference it (409).
 - **Tickets:** create/edit/details in a modal over the board. Fields: type (bug/feature/fix), state (5-column workflow), optional epic, title, body, plus server-set created/modified timestamps and creator. The epic must belong to the ticket's team (enforced in the DB and the API). `modified_at` only advances on a real field/state change.
@@ -41,6 +41,8 @@ Then edit `.env` and set real values:
 - `POSTGRES_PASSWORD` — any password.
 - `JWT_SECRET` — a long random string (32+ chars).
 - `SECRET_KEY_BASE` — a 64+ byte secret (`mix phx.gen.secret`, or any long random string).
+- `SMTP_HOST` — SMTP relay for verification email (defaults to `relay1.dataart.com`).
+- `APP_REQUIRE_EMAIL_VERIFICATION` — `true` (default) blocks unverified accounts at login; set `false` for local testing without a reachable relay. When the relay is unreachable, the verification link is written to the API logs at Debug/Warning so you can still complete the flow.
 
 `.env` is git-ignored and must not be committed. No secrets live in source; only `.env.example` (with placeholders) is committed.
 
@@ -106,6 +108,5 @@ See `docs/` for architecture and requirements, starting with `docs/ARCHITECTURE_
 
 ## Known limitations / out of scope
 
-- **Email verification** from the original brief is intentionally out of scope; authentication is simplified to sign-up + login (passwords are still hashed with Argon2id). See `docs/ARCHITECTURE_AND_PLAN.md`.
-- **Automatic token refresh in the UI** is not implemented: a `/api/v1/auth/refresh` endpoint exists, but the UI does not transparently refresh the access token on expiry. With the default access-token lifetime (120 min), users simply sign in again afterwards.
 - Scrum/sprints, SSO, roles/permissions, attachments, notifications, and real-time multi-user updates are out of scope.
+- Board rendering is not virtualized; it stays usable well past 100 tickets per team, but very large boards are not paginated.

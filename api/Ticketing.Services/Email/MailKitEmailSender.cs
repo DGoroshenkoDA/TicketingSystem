@@ -7,8 +7,9 @@ using MimeKit;
 namespace Ticketing.Services.Email;
 
 // Sends verification emails via SMTP (relay1.dataart.com by default).
-// The verification link is ALWAYS written to the logs, so verification also
-// works locally when the relay is unreachable or no mailbox is available.
+// The raw verification link carries a single-use token, so on the success path it
+// is only logged at Debug. When the relay is unreachable or unconfigured the link
+// is surfaced at Warning instead, so verification still works locally.
 public class MailKitEmailSender : IEmailSender
 {
     private readonly SmtpOptions _options;
@@ -22,11 +23,15 @@ public class MailKitEmailSender : IEmailSender
 
     public async Task SendVerificationEmailAsync(string toEmail, string verificationLink, CancellationToken ct = default)
     {
-        _logger.LogInformation("Email verification link for {Email}: {Link}", toEmail, verificationLink);
+        // The link contains the raw single-use token; keep it out of Information-level logs.
+        _logger.LogDebug("Email verification link for {Email}: {Link}", toEmail, verificationLink);
 
         if (string.IsNullOrWhiteSpace(_options.Host))
         {
-            _logger.LogWarning("SMTP host is not configured; skipping actual email send.");
+            // No relay configured (dev): surface the link so verification still works locally.
+            _logger.LogWarning(
+                "SMTP host is not configured; skipping email send. Verification link for {Email}: {Link}",
+                toEmail, verificationLink);
             return;
         }
 
@@ -56,8 +61,11 @@ public class MailKitEmailSender : IEmailSender
         }
         catch (Exception ex)
         {
-            // Do not fail sign-up if the relay is unreachable; the link is already logged.
-            _logger.LogWarning(ex, "Failed to send verification email to {Email} via SMTP.", toEmail);
+            // Do not fail sign-up if the relay is unreachable; surface the link at Warning
+            // (with the raw token) so a developer can still complete verification.
+            _logger.LogWarning(
+                ex, "Failed to send verification email to {Email} via SMTP. Verification link: {Link}",
+                toEmail, verificationLink);
         }
     }
 }

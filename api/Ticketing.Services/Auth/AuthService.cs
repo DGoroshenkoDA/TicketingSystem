@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Ticketing.Data;
 using Ticketing.Data.Entities;
+using Ticketing.Services.Common;
 using Ticketing.Services.Email;
 
 namespace Ticketing.Services.Auth;
@@ -53,7 +54,16 @@ public class AuthService : IAuthService
         };
 
         _db.Users.Add(user);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
+        {
+            // Lost a race with a concurrent signup for the same email; the DB
+            // unique index rejected the insert. Surface the same conflict as the pre-check.
+            return Error.Conflict("Auth.EmailTaken", "This email address is already registered.");
+        }
 
         await IssueVerificationAsync(user, ct);
 
@@ -90,6 +100,13 @@ public class AuthService : IAuthService
         if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt <= now || stored.User is null)
         {
             return Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.");
+        }
+
+        // Defense in depth: an unverified user must not obtain fresh tokens on refresh,
+        // mirroring the check in LoginAsync (verification may have been revoked since issuance).
+        if (_appOptions.RequireEmailVerification && !stored.User.IsVerified)
+        {
+            return Error.Forbidden("Auth.EmailNotVerified", "Please verify your email address before signing in.");
         }
 
         stored.RevokedAt = now;

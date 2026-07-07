@@ -8,7 +8,10 @@ defmodule TicketingUiWeb.AuthController do
     render(conn, :login, error: nil, email: "")
   end
 
-  def login_create(conn, %{"email" => email, "password" => password}) do
+  def login_create(conn, params) do
+    email = params["email"] || ""
+    password = params["password"] || ""
+
     case AuthApi.login(email, password) do
       {:ok, auth} ->
         conn
@@ -67,4 +70,50 @@ defmodule TicketingUiWeb.AuthController do
       {:error, _} -> render(conn, :verify_error)
     end
   end
+
+  @doc """
+  On-demand refresh used by connected LiveViews after a 401. Refreshes the
+  rotated token pair, re-stores it in the session cookie, and redirects to a
+  sanitized local `return_to`. On failure it logs out and sends the user to
+  the login page.
+  """
+  def refresh(conn, params) do
+    return_to = sanitize_return_to(params["return_to"])
+
+    case get_session(conn, :refresh_token) do
+      token when is_binary(token) and token != "" ->
+        case AuthApi.refresh(token) do
+          {:ok, auth} ->
+            conn
+            |> Auth.log_in(auth)
+            |> redirect(to: return_to)
+
+          {:error, _} ->
+            expired(conn)
+        end
+
+      _ ->
+        expired(conn)
+    end
+  end
+
+  defp expired(conn) do
+    conn
+    |> Auth.log_out()
+    |> put_flash(:error, "Your session has expired. Please sign in again.")
+    |> redirect(to: "/login")
+  end
+
+  # Only allow local paths ("/..."), never protocol-relative ("//" or "/\\").
+  defp sanitize_return_to(path) when is_binary(path) do
+    if String.starts_with?(path, "/") and
+         not String.starts_with?(path, "//") and
+         not String.starts_with?(path, "/\\") do
+      path
+    else
+      "/board"
+    end
+  end
+
+  defp sanitize_return_to(_), do: "/board"
 end

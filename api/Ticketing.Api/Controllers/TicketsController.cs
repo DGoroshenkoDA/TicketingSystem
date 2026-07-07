@@ -41,7 +41,8 @@ public class TicketsController : ControllerBase
         }
 
         var query = new TicketQuery(teamId.Value, type, epicId, search);
-        return ApiResults.Success(await _tickets.ListAsync(query, ct));
+        var result = await _tickets.ListAsync(query, ct);
+        return result.IsError ? ApiResults.Failure(result.FirstError) : ApiResults.Success(result.Value);
     }
 
     [HttpGet("{id:guid}")]

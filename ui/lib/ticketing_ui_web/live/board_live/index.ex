@@ -13,16 +13,14 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
   @types ["bug", "feature", "fix"]
 
+  @page_path "/board"
+
   @impl true
   def mount(_params, _session, socket) do
-    teams = list_teams(socket)
-    selected = teams |> List.first() |> team_id()
-
     socket =
-      socket
-      |> assign(
-        teams: teams,
-        selected_team_id: selected,
+      assign(socket,
+        teams: [],
+        selected_team_id: nil,
         epics: [],
         tickets: [],
         filter_type: "",
@@ -32,11 +30,16 @@ defmodule TicketingUiWeb.BoardLive.Index do
         modal_form: %{},
         modal_epics: [],
         modal_error: nil,
-        comments: []
+        comments: [],
+        loading: true,
+        load_error: nil
       )
-      |> load_board()
 
-    {:ok, socket}
+    if connected?(socket) do
+      {:ok, load_initial(socket)}
+    else
+      {:ok, socket}
+    end
   end
 
   # --- team + filters ---
@@ -108,7 +111,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
          )}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not open ticket.")}
+        {:noreply, put_api_error(socket, err, "Could not open ticket.")}
     end
   end
 
@@ -123,7 +126,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
       {:error, err} ->
         # Server state is unchanged; the re-render returns the card to its column.
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not move the ticket.")}
+        {:noreply, put_api_error(socket, err, "Could not move the ticket.")}
     end
   end
 
@@ -170,7 +173,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
          |> load_tickets()}
 
       {:error, err} ->
-        {:noreply, assign(socket, modal_error: err[:detail] || "Could not save ticket.")}
+        {:noreply, put_modal_error(socket, err, "Could not save ticket.")}
     end
   end
 
@@ -182,7 +185,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
             {:noreply, assign(socket, comments: load_comment_list(socket, id))}
 
           {:error, err} ->
-            {:noreply, assign(socket, modal_error: err[:detail] || "Could not add comment.")}
+            {:noreply, put_modal_error(socket, err, "Could not add comment.")}
         end
 
       _ ->
@@ -196,7 +199,7 @@ defmodule TicketingUiWeb.BoardLive.Index do
         {:noreply, socket |> assign(modal: nil) |> put_flash(:info, "Ticket deleted.") |> load_tickets()}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not delete ticket.")}
+        {:noreply, put_api_error(socket, err, "Could not delete ticket.")}
     end
   end
 
@@ -204,13 +207,23 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
   defp token(socket), do: socket.assigns.current_user.access_token
 
-  defp list_teams(socket) do
+  # Initial load (connected mount): teams first, then epics + tickets.
+  defp load_initial(socket) do
     case TeamsApi.list(token(socket)) do
-      {:ok, teams} when is_list(teams) -> teams
-      _ -> []
+      {:ok, teams} when is_list(teams) ->
+        selected = teams |> List.first() |> team_id()
+
+        socket
+        |> assign(teams: teams, selected_team_id: selected, loading: false, load_error: nil)
+        |> load_board()
+
+      other ->
+        handle_load_error(socket, other)
     end
   end
 
+  # Epics/comments fetched for the modal only; failures fall back to empty and
+  # the interactive handlers surface their own errors.
   defp load_comment_list(socket, ticket_id) do
     case CommentsApi.list(token(socket), ticket_id) do
       {:ok, list} when is_list(list) -> list
@@ -227,25 +240,62 @@ defmodule TicketingUiWeb.BoardLive.Index do
     end
   end
 
-  defp load_board(%{assigns: %{selected_team_id: team_id}} = socket) do
-    socket |> assign(epics: epics_for(socket, team_id)) |> load_tickets()
+  defp load_board(socket) do
+    socket |> load_board_epics() |> load_tickets()
+  end
+
+  defp load_board_epics(%{assigns: %{selected_team_id: nil}} = socket), do: assign(socket, epics: [])
+
+  defp load_board_epics(%{assigns: %{selected_team_id: team_id}} = socket) do
+    if socket.redirected do
+      socket
+    else
+      case EpicsApi.list(token(socket), team_id) do
+        {:ok, epics} when is_list(epics) -> assign(socket, epics: epics, load_error: nil)
+        other -> handle_load_error(socket, other)
+      end
+    end
   end
 
   defp load_tickets(%{assigns: %{selected_team_id: nil}} = socket), do: assign(socket, tickets: [])
 
   defp load_tickets(%{assigns: assigns} = socket) do
-    filters = %{
-      team_id: assigns.selected_team_id,
-      type: assigns.filter_type,
-      epic_id: assigns.filter_epic,
-      search: assigns.filter_search
-    }
+    if socket.redirected do
+      socket
+    else
+      filters = %{
+        team_id: assigns.selected_team_id,
+        type: assigns.filter_type,
+        epic_id: assigns.filter_epic,
+        search: assigns.filter_search
+      }
 
-    case TicketsApi.list(token(socket), filters) do
-      {:ok, tickets} when is_list(tickets) -> assign(socket, tickets: tickets)
-      _ -> assign(socket, tickets: [])
+      case TicketsApi.list(token(socket), filters) do
+        {:ok, tickets} when is_list(tickets) -> assign(socket, tickets: tickets, load_error: nil)
+        other -> handle_load_error(socket, other)
+      end
     end
   end
+
+  # 401 on a page load -> bounce through the refresh endpoint; other failures
+  # surface a banner instead of a misleading empty board.
+  defp handle_load_error(socket, {:error, %{status: 401}}), do: redirect_to_refresh(socket)
+
+  defp handle_load_error(socket, {:error, err}),
+    do: assign(socket, loading: false, load_error: err[:detail] || "Could not load the board.")
+
+  defp handle_load_error(socket, _),
+    do: assign(socket, loading: false, load_error: "Could not load the board.")
+
+  # Interactive API failures: 401 -> refresh, anything else -> flash / modal error.
+  defp put_api_error(socket, %{status: 401}, _fallback), do: redirect_to_refresh(socket)
+  defp put_api_error(socket, err, fallback), do: put_flash(socket, :error, err[:detail] || fallback)
+
+  defp put_modal_error(socket, %{status: 401}, _fallback), do: redirect_to_refresh(socket)
+  defp put_modal_error(socket, err, fallback), do: assign(socket, modal_error: err[:detail] || fallback)
+
+  defp redirect_to_refresh(socket),
+    do: redirect(socket, to: ~p"/session/refresh?#{[return_to: @page_path]}")
 
   defp team_id(nil), do: nil
   defp team_id(team), do: team["id"]
@@ -266,7 +316,17 @@ defmodule TicketingUiWeb.BoardLive.Index do
 
     ~H"""
     <div class="py-6">
-      <p :if={@teams == []} class="mt-2 text-gray-500">
+      <p
+        :if={@load_error}
+        class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+        role="alert"
+      >
+        {@load_error}
+      </p>
+
+      <p :if={@loading} class="mt-2 text-gray-500">Loading board…</p>
+
+      <p :if={not @loading and @teams == []} class="mt-2 text-gray-500">
         Create a team first on the <.link navigate={~p"/teams"} class="text-brand underline">Teams</.link> page.
       </p>
 
@@ -401,8 +461,6 @@ defmodule TicketingUiWeb.BoardLive.Index do
               <option :for={{s, label} <- @states} value={s} selected={s == @form["state"]}>{label}</option>
             </select>
           </div>
-          <input :if={@modal.mode == :new} type="hidden" name="state" value="new" />
-
           <div>
             <label class="block text-sm font-medium text-gray-700">Title</label>
             <input

@@ -177,15 +177,65 @@ public class TicketServiceTests
         await Task.Delay(5);
         var second = (await tickets.CreateAsync(new CreateTicketRequest(teamId, "feature", null, "Beta feature", "B"), user)).Value;
 
-        var all = await tickets.ListAsync(new TicketQuery(teamId, null, null, null));
+        var all = (await tickets.ListAsync(new TicketQuery(teamId, null, null, null))).Value;
         Assert.Equal(second.Id, all[0].Id); // most recently modified first
 
-        var bugs = await tickets.ListAsync(new TicketQuery(teamId, "bug", null, null));
+        var bugs = (await tickets.ListAsync(new TicketQuery(teamId, "bug", null, null))).Value;
         Assert.Single(bugs);
         Assert.Equal(first.Id, bugs[0].Id);
 
-        var search = await tickets.ListAsync(new TicketQuery(teamId, null, null, "beta"));
+        var search = (await tickets.ListAsync(new TicketQuery(teamId, null, null, "beta"))).Value;
         Assert.Single(search);
         Assert.Equal(second.Id, search[0].Id);
+    }
+
+    [Fact]
+    public async Task List_Invalid_Type_Returns_Validation()
+    {
+        using var db = TestSupport.NewDb();
+        var user = TestSupport.AddUser(db);
+        var teamId = await NewTeam(db);
+        var tickets = TestSupport.NewTicketService(db);
+        await tickets.CreateAsync(new CreateTicketRequest(teamId, "bug", null, "T", "B"), user);
+
+        // A non-empty, unparseable type must be rejected rather than silently ignored.
+        var result = await tickets.ListAsync(new TicketQuery(teamId, "task", null, null));
+
+        Assert.True(result.IsError);
+        Assert.Equal(ErrorType.Validation, result.FirstError.Type);
+    }
+
+    [Fact]
+    public async Task List_Valid_Type_Filters_Correctly()
+    {
+        using var db = TestSupport.NewDb();
+        var user = TestSupport.AddUser(db);
+        var teamId = await NewTeam(db);
+        var tickets = TestSupport.NewTicketService(db);
+        var bug = (await tickets.CreateAsync(new CreateTicketRequest(teamId, "bug", null, "Bug", "B"), user)).Value;
+        await tickets.CreateAsync(new CreateTicketRequest(teamId, "feature", null, "Feature", "B"), user);
+
+        var result = await tickets.ListAsync(new TicketQuery(teamId, "bug", null, null));
+
+        Assert.False(result.IsError);
+        Assert.Single(result.Value);
+        Assert.Equal(bug.Id, result.Value[0].Id);
+    }
+
+    [Fact]
+    public async Task List_Empty_Type_Returns_All()
+    {
+        using var db = TestSupport.NewDb();
+        var user = TestSupport.AddUser(db);
+        var teamId = await NewTeam(db);
+        var tickets = TestSupport.NewTicketService(db);
+        await tickets.CreateAsync(new CreateTicketRequest(teamId, "bug", null, "A", "B"), user);
+        await tickets.CreateAsync(new CreateTicketRequest(teamId, "feature", null, "C", "D"), user);
+
+        // Whitespace/empty type means "no filter".
+        var result = await tickets.ListAsync(new TicketQuery(teamId, "   ", null, null));
+
+        Assert.False(result.IsError);
+        Assert.Equal(2, result.Value.Count);
     }
 }

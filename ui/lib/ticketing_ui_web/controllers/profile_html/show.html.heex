@@ -1,6 +1,14 @@
 <div class="mx-auto max-w-xl py-8">
   <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
 
+  <p
+    :if={@load_error}
+    class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+    role="alert"
+  >
+    {@load_error}
+  </p>
+
   <section class="mt-6 rounded-lg border border-gray-100 p-4">
     <h2 class="font-medium text-gray-900">Account</h2>
     <p class="mt-1 text-sm text-gray-500">Email: {@profile["email"]}</p>

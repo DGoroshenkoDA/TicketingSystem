@@ -3,13 +3,39 @@ defmodule TicketingUiWeb.EpicLive.Index do
 
   alias TicketingUi.Api.{EpicsApi, TeamsApi}
 
+  @page_path "/epics"
+
   @impl true
   def mount(_params, _session, socket) do
-    socket = assign(socket, editing_id: nil, epics: [])
-    teams = list_teams(socket)
-    selected = teams |> List.first() |> team_id()
+    socket =
+      assign(socket,
+        editing_id: nil,
+        teams: [],
+        selected_team_id: nil,
+        epics: [],
+        loading: true,
+        load_error: nil
+      )
 
-    {:ok, socket |> assign(teams: teams, selected_team_id: selected) |> load_epics()}
+    if connected?(socket) do
+      {:ok, load_initial(socket)}
+    else
+      {:ok, socket}
+    end
+  end
+
+  defp load_initial(socket) do
+    case TeamsApi.list(token(socket)) do
+      {:ok, teams} when is_list(teams) ->
+        selected = teams |> List.first() |> team_id()
+
+        socket
+        |> assign(teams: teams, selected_team_id: selected, loading: false, load_error: nil)
+        |> load_epics()
+
+      other ->
+        handle_load_error(socket, other)
+    end
   end
 
   @impl true
@@ -27,7 +53,7 @@ defmodule TicketingUiWeb.EpicLive.Index do
 
       case EpicsApi.create(token(socket), attrs) do
         {:ok, _} -> {:noreply, socket |> put_flash(:info, "Epic created.") |> load_epics()}
-        {:error, err} -> {:noreply, put_flash(socket, :error, err[:detail] || "Could not create epic.")}
+        {:error, err} -> {:noreply, put_api_error(socket, err, "Could not create epic.")}
       end
     end
   end
@@ -43,34 +69,45 @@ defmodule TicketingUiWeb.EpicLive.Index do
         {:noreply, socket |> assign(editing_id: nil) |> put_flash(:info, "Epic updated.") |> load_epics()}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not update epic.")}
+        {:noreply, put_api_error(socket, err, "Could not update epic.")}
     end
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
     case EpicsApi.delete(token(socket), id) do
       {:ok, _} -> {:noreply, socket |> put_flash(:info, "Epic deleted.") |> load_epics()}
-      {:error, err} -> {:noreply, put_flash(socket, :error, err[:detail] || "Could not delete epic.")}
+      {:error, err} -> {:noreply, put_api_error(socket, err, "Could not delete epic.")}
     end
   end
 
   defp token(socket), do: socket.assigns.current_user.access_token
 
-  defp list_teams(socket) do
-    case TeamsApi.list(token(socket)) do
-      {:ok, teams} when is_list(teams) -> teams
-      _ -> []
-    end
-  end
-
   defp load_epics(%{assigns: %{selected_team_id: nil}} = socket), do: assign(socket, epics: [])
 
   defp load_epics(%{assigns: %{selected_team_id: team_id}} = socket) do
-    case EpicsApi.list(token(socket), team_id) do
-      {:ok, epics} when is_list(epics) -> assign(socket, epics: epics)
-      _ -> assign(socket, epics: [])
+    if socket.redirected do
+      socket
+    else
+      case EpicsApi.list(token(socket), team_id) do
+        {:ok, epics} when is_list(epics) -> assign(socket, epics: epics, load_error: nil)
+        other -> handle_load_error(socket, other)
+      end
     end
   end
+
+  defp handle_load_error(socket, {:error, %{status: 401}}), do: redirect_to_refresh(socket)
+
+  defp handle_load_error(socket, {:error, err}),
+    do: assign(socket, loading: false, load_error: err[:detail] || "Could not load epics.")
+
+  defp handle_load_error(socket, _),
+    do: assign(socket, loading: false, load_error: "Could not load epics.")
+
+  defp put_api_error(socket, %{status: 401}, _fallback), do: redirect_to_refresh(socket)
+  defp put_api_error(socket, err, fallback), do: put_flash(socket, :error, err[:detail] || fallback)
+
+  defp redirect_to_refresh(socket),
+    do: redirect(socket, to: ~p"/session/refresh?#{[return_to: @page_path]}")
 
   defp team_id(nil), do: nil
   defp team_id(team), do: team["id"]
@@ -84,11 +121,21 @@ defmodule TicketingUiWeb.EpicLive.Index do
     <div class="py-8">
       <h1 class="text-2xl font-bold text-gray-900">Epics</h1>
 
-      <p :if={@teams == []} class="mt-8 text-gray-500">
+      <p
+        :if={@load_error}
+        class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+        role="alert"
+      >
+        {@load_error}
+      </p>
+
+      <p :if={@loading} class="mt-8 text-gray-500">Loading epics…</p>
+
+      <p :if={not @loading and @teams == []} class="mt-8 text-gray-500">
         Create a team first, then add epics to it.
       </p>
 
-      <div :if={@teams != []} class="mt-4">
+      <div :if={not @loading and @teams != []} class="mt-4">
         <form phx-change="select_team">
           <label class="block text-sm font-medium text-gray-700">Team</label>
           <select name="team_id" class="mt-1 w-64 rounded-lg border-gray-300 focus:border-brand focus:ring-brand">

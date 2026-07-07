@@ -60,9 +60,9 @@ The whole stack comes up from the repository root with a single `docker compose 
 | Fresh database: schema and migration metadata only | Phase 1 |
 | QA creates data through the UI/API | All phases (no seeds) |
 
-## Deviation from the original hackathon spec
+## Email verification
 
-The original requirements (`requirements/…docx`, sections 3 and 10) mandate email verification: a verification email sent via SMTP (`relay1.dataart.com`), single-use tokens expiring in 24h, an unverified account being blocked from the app, a verification-result screen, and a resend action. By deliberate decision this is **out of scope** here — authentication is simplified to profile creation + login only. Passwords are still hashed (Argon2id) and never stored in plaintext. If this project is judged against the original spec, the missing email-verification flow is the one known gap.
+Implemented per the original requirements (`requirements/…docx`, sections 3 and 10): a verification email is sent via SMTP (`relay1.dataart.com`) on sign-up, tokens are single-use and expire after 24h, unverified accounts are blocked at login (when `APP_REQUIRE_EMAIL_VERIFICATION=true`, the shipped default), a verification-result screen is shown, and a resend action re-issues a token while invalidating earlier unused ones. Only the token hash is stored; the raw verification link is logged at Debug (Warning if the SMTP send fails) so it can be recovered in local runs without a reachable relay. Passwords are hashed with Argon2id and never stored in plaintext.
 
 ## Resolved decisions
 

@@ -36,17 +36,43 @@ defmodule TicketingUiWeb.Auth do
     end
   end
 
+  @doc """
+  Refreshes the access/refresh token pair when the access token is missing,
+  expired, or about to expire (~60s). The .NET API rotates refresh tokens, so
+  the new pair must be persisted back into the session cookie — which is only
+  possible from a plug/controller (a connected LiveView cannot set cookies).
+
+  On success the session (and :current_user assign) are updated with the new
+  tokens. On failure the session is cleared so the downstream auth guard
+  redirects. This plug never crashes the request pipeline.
+  """
+  def refresh_token_if_needed(conn, _opts) do
+    refresh_token = get_session(conn, :refresh_token)
+
+    if is_binary(refresh_token) and refresh_token != "" and access_token_stale?(conn) do
+      case safe_refresh(refresh_token) do
+        {:ok, auth} ->
+          conn = store_tokens(conn, auth)
+          assign(conn, :current_user, current_user_from_session(conn))
+
+        _ ->
+          conn
+          |> configure_session(renew: true)
+          |> clear_session()
+          |> assign(:current_user, nil)
+      end
+    else
+      conn
+    end
+  rescue
+    _ -> conn
+  end
+
   @doc "Stores tokens + user in the session after a successful login."
   def log_in(conn, auth) do
-    user = auth.user
-
     conn
     |> configure_session(renew: true)
-    |> put_session(:access_token, auth.access_token)
-    |> put_session(:refresh_token, auth.refresh_token)
-    |> put_session(:user_id, user.id)
-    |> put_session(:user_email, user.email)
-    |> put_session(:user_name, user.display_name)
+    |> store_tokens(auth)
   end
 
   @doc "Revokes the refresh token via the API and clears the session."
@@ -77,15 +103,50 @@ defmodule TicketingUiWeb.Auth do
     end
   end
 
-  @doc "Session map handed to live_session."
-  def session(conn) do
-    %{
-      "access_token" => get_session(conn, :access_token),
-      "refresh_token" => get_session(conn, :refresh_token),
-      "user_id" => get_session(conn, :user_id),
-      "user_email" => get_session(conn, :user_email),
-      "user_name" => get_session(conn, :user_name)
-    }
+  # Persists a normalized auth payload (see AuthApi.normalize_auth/1) into the
+  # session. User fields are only overwritten when present, so a refresh
+  # response that omits the user does not wipe the signed-in identity.
+  defp store_tokens(conn, auth) do
+    conn
+    |> put_session(:access_token, auth[:access_token])
+    |> put_session(:refresh_token, auth[:refresh_token])
+    |> put_session(:access_expires_at, auth[:access_expires_at])
+    |> put_session(:refresh_expires_at, auth[:refresh_expires_at])
+    |> maybe_put_user(auth[:user])
+  end
+
+  defp maybe_put_user(conn, %{id: id} = user) when is_binary(id) and id != "" do
+    conn
+    |> put_session(:user_id, id)
+    |> put_session(:user_email, user[:email])
+    |> put_session(:user_name, user[:display_name])
+  end
+
+  defp maybe_put_user(conn, _), do: conn
+
+  # True when the access token is missing, unparseable, expired, or within ~60s
+  # of expiry. Missing/unparseable is treated as stale so we refresh defensively.
+  defp access_token_stale?(conn) do
+    case get_session(conn, :access_expires_at) do
+      iso when is_binary(iso) and iso != "" ->
+        case DateTime.from_iso8601(iso) do
+          {:ok, expires_at, _offset} ->
+            threshold = DateTime.add(DateTime.utc_now(), 60, :second)
+            DateTime.compare(expires_at, threshold) != :gt
+
+          _ ->
+            true
+        end
+
+      _ ->
+        true
+    end
+  end
+
+  defp safe_refresh(refresh_token) do
+    AuthApi.refresh(refresh_token)
+  rescue
+    _ -> {:error, :exception}
   end
 
   defp current_user_from_session(conn) do

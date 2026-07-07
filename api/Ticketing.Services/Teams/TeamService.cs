@@ -2,6 +2,7 @@ using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using Ticketing.Data;
 using Ticketing.Data.Entities;
+using Ticketing.Services.Common;
 
 namespace Ticketing.Services.Teams;
 
@@ -56,7 +57,16 @@ public class TeamService : ITeamService
         };
 
         _db.Teams.Add(team);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
+        {
+            // Lost a race with a concurrent create for the same name; the DB
+            // unique index rejected the insert. Surface the same conflict as the pre-check.
+            return Error.Conflict("Team.NameTaken", "A team with this name already exists.");
+        }
         // A freshly created team is always empty.
         return new TeamDto(team.Id, team.Name, team.CreatedAt, team.ModifiedAt, 0, 0);
     }
@@ -86,7 +96,16 @@ public class TeamService : ITeamService
             team.Name = name;
             team.NameNormalized = normalized;
             team.ModifiedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (PostgresErrors.IsUniqueViolation(ex))
+            {
+                // Lost a race with a concurrent rename to the same name; the DB
+                // unique index rejected the update. Surface the same conflict as the pre-check.
+                return Error.Conflict("Team.NameTaken", "A team with this name already exists.");
+            }
         }
 
         return await ToDtoAsync(team, ct);

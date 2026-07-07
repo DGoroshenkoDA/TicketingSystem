@@ -5,16 +5,29 @@ defmodule TicketingUiWeb.ProfileController do
   alias TicketingUiWeb.Theme
 
   def show(conn, _params) do
-    profile =
-      case ProfileApi.get(token(conn)) do
-        {:ok, data} -> data
-        _ -> %{}
-      end
+    themes = Theme.themes()
+    current_theme = conn.assigns[:theme] || Theme.default()
 
-    render(conn, :show, profile: profile, themes: Theme.themes(), current_theme: conn.assigns[:theme] || Theme.default())
+    case ProfileApi.get(token(conn)) do
+      {:ok, data} ->
+        render(conn, :show, profile: data, themes: themes, current_theme: current_theme, load_error: nil)
+
+      {:error, %{status: 401}} ->
+        redirect(conn, to: ~p"/session/refresh?#{[return_to: "/profile"]}")
+
+      {:error, err} ->
+        render(conn, :show,
+          profile: %{},
+          themes: themes,
+          current_theme: current_theme,
+          load_error: err[:detail] || "Could not load your profile."
+        )
+    end
   end
 
-  def update(conn, %{"display_name" => display_name}) do
+  def update(conn, params) do
+    display_name = params["display_name"] || ""
+
     case ProfileApi.update_display_name(token(conn), display_name) do
       {:ok, data} ->
         conn
@@ -27,7 +40,10 @@ defmodule TicketingUiWeb.ProfileController do
     end
   end
 
-  def change_password(conn, %{"current_password" => current, "new_password" => new}) do
+  def change_password(conn, params) do
+    current = params["current_password"] || ""
+    new = params["new_password"] || ""
+
     case ProfileApi.change_password(token(conn), current, new) do
       {:ok, _} ->
         conn |> put_flash(:info, "Password changed.") |> redirect(to: "/profile")
@@ -37,7 +53,9 @@ defmodule TicketingUiWeb.ProfileController do
     end
   end
 
-  def set_theme(conn, %{"theme" => theme}) do
+  def set_theme(conn, params) do
+    theme = params["theme"] || ""
+
     conn =
       if Theme.valid?(theme) do
         put_resp_cookie(conn, Theme.cookie_name(), theme,

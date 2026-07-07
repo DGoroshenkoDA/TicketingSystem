@@ -15,6 +15,11 @@ defmodule TicketingUiWeb.Router do
     plug :fetch_theme
   end
 
+  # Refreshes rotated tokens before the auth guard runs on browser requests.
+  pipeline :refresh_tokens do
+    plug :refresh_token_if_needed
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -27,14 +32,23 @@ defmodule TicketingUiWeb.Router do
     post "/login", AuthController, :login_create
     get "/signup", AuthController, :signup_new
     post "/signup", AuthController, :signup_create
-    post "/resend-verification", AuthController, :resend
   end
 
-  # Email verification landing (works whether signed in or not).
+  # Email verification landing + resend (works whether signed in or not).
   scope "/", TicketingUiWeb do
     pipe_through :browser
 
     get "/verify", AuthController, :verify
+    post "/resend-verification", AuthController, :resend
+  end
+
+  # On-demand token refresh for connected LiveViews after a 401. Reachable by an
+  # authenticated user; not behind redirect_if_authenticated, and deliberately
+  # not behind :refresh_tokens (the action owns the refresh).
+  scope "/", TicketingUiWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/session/refresh", AuthController, :refresh
   end
 
   # Logout (available while signed in).
@@ -47,7 +61,7 @@ defmodule TicketingUiWeb.Router do
 
   # Authenticated business routes.
   scope "/", TicketingUiWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [:browser, :refresh_tokens, :require_authenticated_user]
 
     get "/", PageController, :home
 

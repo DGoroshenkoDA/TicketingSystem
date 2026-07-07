@@ -21,6 +21,19 @@ builder.Services.AddDbContext<TicketingDbContext>(options =>
 // --- Options + services ---
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
+
+// Fail fast if the JWT signing secret is missing or too weak, so the app crashes
+// at boot rather than serving unauthenticated. The test host binds its own config,
+// so this guard only applies to the real app path.
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+    if (string.IsNullOrWhiteSpace(jwt.Secret) || jwt.Secret.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "Jwt:Secret is missing or too short. Configure a signing secret of at least 32 characters (env: Jwt__Secret).");
+    }
+}
 builder.Services.Configure<Ticketing.Services.Email.SmtpOptions>(
     builder.Configuration.GetSection(Ticketing.Services.Email.SmtpOptions.SectionName));
 builder.Services.AddTicketingServices();

@@ -3,9 +3,17 @@ defmodule TicketingUiWeb.TeamLive.Index do
 
   alias TicketingUi.Api.TeamsApi
 
+  @page_path "/teams"
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, load_teams(assign(socket, editing_id: nil))}
+    socket = assign(socket, editing_id: nil, teams: [], loading: true, load_error: nil)
+
+    if connected?(socket) do
+      {:ok, load_teams(socket)}
+    else
+      {:ok, socket}
+    end
   end
 
   @impl true
@@ -15,7 +23,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
         {:noreply, socket |> put_flash(:info, "Team created.") |> load_teams()}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not create team.")}
+        {:noreply, put_api_error(socket, err, "Could not create team.")}
     end
   end
 
@@ -33,7 +41,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
         {:noreply, socket |> assign(editing_id: nil) |> put_flash(:info, "Team renamed.") |> load_teams()}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not rename team.")}
+        {:noreply, put_api_error(socket, err, "Could not rename team.")}
     end
   end
 
@@ -43,7 +51,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
         {:noreply, socket |> put_flash(:info, "Team deleted.") |> load_teams()}
 
       {:error, err} ->
-        {:noreply, put_flash(socket, :error, err[:detail] || "Could not delete team.")}
+        {:noreply, put_api_error(socket, err, "Could not delete team.")}
     end
   end
 
@@ -51,16 +59,41 @@ defmodule TicketingUiWeb.TeamLive.Index do
 
   defp load_teams(socket) do
     case TeamsApi.list(token(socket)) do
-      {:ok, teams} when is_list(teams) -> assign(socket, teams: teams)
-      _ -> assign(socket, teams: [])
+      {:ok, teams} when is_list(teams) ->
+        assign(socket, teams: teams, loading: false, load_error: nil)
+
+      {:error, %{status: 401}} ->
+        redirect_to_refresh(socket)
+
+      {:error, err} ->
+        assign(socket, loading: false, load_error: err[:detail] || "Could not load teams.")
+
+      _ ->
+        assign(socket, teams: [], loading: false)
     end
   end
+
+  defp put_api_error(socket, %{status: 401}, _fallback), do: redirect_to_refresh(socket)
+  defp put_api_error(socket, err, fallback), do: put_flash(socket, :error, err[:detail] || fallback)
+
+  defp redirect_to_refresh(socket),
+    do: redirect(socket, to: ~p"/session/refresh?#{[return_to: @page_path]}")
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="py-8">
       <h1 class="text-2xl font-bold text-gray-900">Teams</h1>
+
+      <p
+        :if={@load_error}
+        class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200"
+        role="alert"
+      >
+        {@load_error}
+      </p>
+
+      <p :if={@loading} class="mt-8 text-gray-500">Loading teams…</p>
 
       <form phx-submit="create" class="mt-4 flex gap-2">
         <input
@@ -75,7 +108,7 @@ defmodule TicketingUiWeb.TeamLive.Index do
         </button>
       </form>
 
-      <p :if={@teams == []} class="mt-8 text-gray-500">No teams yet. Create your first team above.</p>
+      <p :if={not @loading and @teams == []} class="mt-8 text-gray-500">No teams yet. Create your first team above.</p>
 
       <ul :if={@teams != []} class="mt-6 divide-y divide-gray-100 rounded-lg border border-gray-100">
         <li :for={team <- @teams} class="flex items-center justify-between px-4 py-3">

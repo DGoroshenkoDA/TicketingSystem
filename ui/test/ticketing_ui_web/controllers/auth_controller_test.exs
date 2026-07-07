@@ -109,4 +109,116 @@ defmodule TicketingUiWeb.AuthControllerTest do
 
     assert redirected_to(conn) == "/login"
   end
+
+  test "a signed-in user can still resend verification", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/api/v1/auth/resend-verification", fn c ->
+      json(c, 200, %{success: true, data: %{sent: true}})
+    end)
+
+    conn = post(authed(conn), "/resend-verification", %{"email" => "a@b.com"})
+
+    # Not bounced by redirect_if_authenticated; the resend runs.
+    assert redirected_to(conn) == "/login"
+  end
+
+  test "login with missing fields re-renders instead of crashing", %{conn: conn, bypass: bypass} do
+    Bypass.stub(bypass, "POST", "/api/v1/auth/login", fn c ->
+      json(c, 401, %{success: false, code: "Auth.InvalidCredentials", detail: "Invalid email or password."})
+    end)
+
+    conn = post(conn, "/login", %{"email" => "a@b.com"})
+
+    assert html_response(conn, 200) =~ "Invalid email or password."
+  end
+
+  test "logout revokes the refresh token and clears the session", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/api/v1/auth/logout", fn c ->
+      json(c, 200, %{success: true, data: %{}})
+    end)
+
+    conn = delete(authed(conn), "/logout")
+
+    assert redirected_to(conn) == "/login"
+    refute get_session(conn, :access_token)
+    refute get_session(conn, :user_id)
+  end
+
+  test "unauthenticated access to a protected route redirects to login", %{conn: conn} do
+    conn = get(conn, "/profile")
+
+    assert redirected_to(conn) == "/login"
+  end
+
+  test "a signed-in user is redirected away from the login page", %{conn: conn} do
+    conn = get(authed(conn), "/login")
+
+    assert redirected_to(conn) == "/"
+  end
+
+  test "the refresh endpoint rotates tokens and redirects to a sanitized return_to",
+       %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/api/v1/auth/refresh", fn c ->
+      json(c, 200, %{
+        success: true,
+        data: %{
+          accessToken: "new-at",
+          refreshToken: "new-rt",
+          accessExpiresAt: "2099-01-01T00:00:00Z",
+          refreshExpiresAt: "2099-02-01T00:00:00Z"
+        }
+      })
+    end)
+
+    conn = get(authed(conn), "/session/refresh", %{"return_to" => "/board"})
+
+    assert redirected_to(conn) == "/board"
+    assert get_session(conn, :access_token) == "new-at"
+    assert get_session(conn, :refresh_token) == "new-rt"
+    # Identity is preserved even though the refresh payload omitted the user.
+    assert get_session(conn, :user_id) == "u-1"
+  end
+
+  test "the refresh endpoint rejects a non-local return_to", %{conn: conn, bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/api/v1/auth/refresh", fn c ->
+      json(c, 200, %{
+        success: true,
+        data: %{
+          accessToken: "new-at",
+          refreshToken: "new-rt",
+          accessExpiresAt: "2099-01-01T00:00:00Z",
+          refreshExpiresAt: "2099-02-01T00:00:00Z"
+        }
+      })
+    end)
+
+    conn = get(authed(conn), "/session/refresh", %{"return_to" => "//evil.example.com"})
+
+    assert redirected_to(conn) == "/board"
+  end
+
+  test "the refresh endpoint logs out on a failed refresh", %{conn: conn, bypass: bypass} do
+    Bypass.expect(bypass, "POST", "/api/v1/auth/refresh", fn c ->
+      json(c, 401, %{success: false, code: "Auth.InvalidRefreshToken", detail: "expired"})
+    end)
+
+    Bypass.stub(bypass, "POST", "/api/v1/auth/logout", fn c ->
+      json(c, 200, %{success: true, data: %{}})
+    end)
+
+    conn = get(authed(conn), "/session/refresh", %{"return_to" => "/board"})
+
+    assert redirected_to(conn) == "/login"
+    refute get_session(conn, :user_id)
+  end
+
+  defp authed(conn) do
+    Plug.Test.init_test_session(conn, %{
+      "user_id" => "u-1",
+      "user_email" => "a@b.com",
+      "user_name" => "Alice",
+      "access_token" => "old-at",
+      "refresh_token" => "old-rt",
+      "access_expires_at" => "2099-01-01T00:00:00Z"
+    })
+  end
 end

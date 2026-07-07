@@ -17,7 +17,9 @@ defmodule TicketingUiWeb.TeamLiveTest do
       "user_email" => "a@b.com",
       "user_name" => "Alice",
       "access_token" => "token",
-      "refresh_token" => "refresh"
+      "refresh_token" => "refresh",
+      # Far-future expiry so the refresh_token_if_needed plug is a no-op.
+      "access_expires_at" => "2099-01-01T00:00:00Z"
     })
   end
 

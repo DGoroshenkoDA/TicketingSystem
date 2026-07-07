@@ -26,12 +26,19 @@ public class TicketService : ITicketService
         t.CreatedAt,
         t.ModifiedAt);
 
-    public async Task<List<TicketDto>> ListAsync(TicketQuery query, CancellationToken ct = default)
+    public async Task<ErrorOr<List<TicketDto>>> ListAsync(TicketQuery query, CancellationToken ct = default)
     {
         var q = _db.Tickets.Where(t => t.TeamId == query.TeamId);
 
-        if (TicketEnums.IsValidType(query.Type))
+        // An absent/empty type means "no filter"; a non-empty but unknown value is a bad request
+        // and must not be silently ignored (which would return every ticket).
+        if (!string.IsNullOrWhiteSpace(query.Type))
         {
+            if (!TicketEnums.IsValidType(query.Type))
+            {
+                return Error.Validation("Ticket.InvalidType", "Ticket type must be one of: bug, feature, fix.");
+            }
+
             q = q.Where(t => t.Type == query.Type);
         }
 
